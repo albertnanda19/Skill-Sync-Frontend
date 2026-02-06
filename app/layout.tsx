@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 
+import QueryProvider from "@/components/QueryProvider";
+
 const poppins = Poppins({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -29,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}
       >
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

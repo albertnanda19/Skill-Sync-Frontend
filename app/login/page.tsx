@@ -1,11 +1,16 @@
 import Link from "next/link";
 
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import LoginForm from "@/components/LoginForm";
 
 export default function LoginPage() {
   return (
@@ -18,7 +23,9 @@ export default function LoginPage() {
               <Sparkles className="size-4" />
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-tight">SkillSync</div>
+              <div className="text-sm font-semibold tracking-tight">
+                SkillSync
+              </div>
               <div className="text-xs text-muted-foreground">Welcome back</div>
             </div>
           </Link>
@@ -35,30 +42,17 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-5">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" placeholder="you@email.com" type="email" autoComplete="email" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" autoComplete="current-password" />
-              </div>
+            <LoginForm />
 
-              <Button className="w-full" size="lg" asChild>
-                <Link href="/dashboard">
-                  Sign In
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-
-              <div className="text-center text-sm text-muted-foreground">
-                New here?{" "}
-                <Link className="text-foreground underline underline-offset-4" href="/register">
-                  Create an account
-                </Link>
-              </div>
-            </form>
+            <div className="mt-5 text-center text-sm text-muted-foreground">
+              New here?{" "}
+              <Link
+                className="text-foreground underline underline-offset-4"
+                href="/register"
+              >
+                Create an account
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
