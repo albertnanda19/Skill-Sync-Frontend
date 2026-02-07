@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { createJobsSocket } from "@/lib/ws/jobsSocket";
+import { wsManager } from "@/lib/websocket/wsManager";
 
 export type JobsWebSocketStatus =
   | "disconnected"
@@ -11,131 +11,118 @@ export type JobsWebSocketStatus =
   | "connected"
   | "reconnecting";
 
-export function useJobsWebSocket(keyword: string) {
+export function useJobsWebSocket(keyword: string, connectKey = 0) {
   const queryClient = useQueryClient();
-
-  const socketRef = React.useRef<WebSocket | null>(null);
-  const reconnectTimerRef = React.useRef<number | null>(null);
-  const retriesRef = React.useRef(0);
-  const disposedRef = React.useRef(false);
-  const currentKeywordRef = React.useRef("");
 
   const [status, setStatus] = React.useState<JobsWebSocketStatus>(
     "disconnected",
   );
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [hasError, setHasError] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    disposedRef.current = false;
-
-    const normalizedKeyword = keyword.trim();
-
-    if (currentKeywordRef.current === normalizedKeyword) {
-      return;
-    }
-
-    currentKeywordRef.current = normalizedKeyword;
-
-    function clearReconnectTimer() {
-      if (reconnectTimerRef.current !== null) {
-        window.clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
+    const timer = window.setInterval(() => {
+      if (!wsManager.isEnabled()) {
+        setStatus("disconnected");
+        return;
       }
-    }
 
-    function disconnect() {
-      clearReconnectTimer();
+      const readyState = wsManager.getReadyState();
+      const { isConnected, reconnectAttempts } = wsManager.getConnectionState();
 
-      const ws = socketRef.current;
-      socketRef.current = null;
+      if (isConnected || readyState === WebSocket.OPEN) {
+        setStatus("connected");
+        return;
+      }
 
-      if (ws) {
-        ws.onopen = null;
-        ws.onclose = null;
-        ws.onmessage = null;
-        ws.onerror = null;
+      if (readyState === WebSocket.CONNECTING) {
+        setStatus(reconnectAttempts > 0 ? "reconnecting" : "connecting");
+        return;
+      }
 
-        try {
-          ws.close();
-        } catch (error) {
-          console.error("[useJobsWebSocket] close() failed", error);
-        }
+      if (reconnectAttempts > 0) {
+        setStatus("reconnecting");
+        return;
       }
 
       setStatus("disconnected");
+    }, 500);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const normalizedKeyword = keyword.trim();
+    const channel = normalizedKeyword ? `jobs:updated:${normalizedKeyword}` : "";
+
+    if (!channel) {
+      setHasError(false);
+      setStatus("disconnected");
+      return;
     }
 
-    disconnect();
-
-    if (!normalizedKeyword) {
-      return () => {
-        disposedRef.current = true;
-        disconnect();
-      };
+    if (!wsManager.isEnabled()) {
+      setHasError(false);
+      setStatus("disconnected");
+      return;
     }
 
-    const maxRetries = 5;
-    const retryDelayMs = 3000;
+    setStatus("connecting");
+    setHasError(false);
+
+    const baseUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+      setHasError(false);
+      setStatus("disconnected");
+      return;
+    }
+
+    let wsUrlWithKeyword = "";
+    try {
+      const u = new URL(baseUrl, window.location.origin);
+      u.searchParams.set("keyword", normalizedKeyword);
+      wsUrlWithKeyword = u.toString();
+    } catch (error) {
+      console.error("[useJobsWebSocket] Invalid NEXT_PUBLIC_WS_URL", error);
+      setHasError(true);
+      setStatus("disconnected");
+      return;
+    }
 
     const onUpdate = () => {
-      if (disposedRef.current) return;
-
       setIsRefreshing(true);
-
       queryClient.invalidateQueries({
         queryKey: ["jobs"],
       });
     };
 
-    function connect(nextStatus: JobsWebSocketStatus) {
-      if (disposedRef.current) return;
+    const onMessage = (_payload: unknown) => {
+      onUpdate();
+    };
 
-      setStatus(nextStatus);
-
-      try {
-        const ws = createJobsSocket(normalizedKeyword, onUpdate);
-        socketRef.current = ws;
-
-        ws.onopen = () => {
-          retriesRef.current = 0;
-          setStatus("connected");
-        };
-
-        ws.onclose = () => {
-          if (disposedRef.current) return;
-
-          if (retriesRef.current >= maxRetries) {
-            setStatus("disconnected");
-            return;
-          }
-
-          retriesRef.current += 1;
-          setStatus("reconnecting");
-
-          clearReconnectTimer();
-          reconnectTimerRef.current = window.setTimeout(() => {
-            connect("reconnecting");
-          }, retryDelayMs);
-        };
-
-        ws.onerror = (error) => {
-          console.error("[useJobsWebSocket] WebSocket error", error);
-        };
-      } catch (error) {
-        console.error("[useJobsWebSocket] Failed to connect", error);
-        setStatus("disconnected");
-      }
+    try {
+      wsManager.connectTo(wsUrlWithKeyword);
+      wsManager.subscribe(channel, onMessage);
+    } catch (error) {
+      console.error("[useJobsWebSocket] Failed to subscribe", error);
+      setHasError(true);
+      setStatus("disconnected");
     }
 
-    connect("connecting");
-
     return () => {
-      disposedRef.current = true;
-      disconnect();
+      try {
+        wsManager.unsubscribe(channel, onMessage);
+      } catch (error) {
+        console.error("[useJobsWebSocket] Failed to unsubscribe", error);
+      }
     };
-  }, [keyword, queryClient]);
+  }, [keyword, connectKey, queryClient]);
 
   React.useEffect(() => {
     if (!isRefreshing) return;
@@ -155,5 +142,5 @@ export function useJobsWebSocket(keyword: string) {
     return unsubscribe;
   }, [isRefreshing, queryClient]);
 
-  return { status, isRefreshing };
+  return { status, isRefreshing, hasError };
 }

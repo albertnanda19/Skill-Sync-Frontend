@@ -46,22 +46,107 @@ function formatPostedDate(value: string | undefined) {
   });
 }
 
-function useDebouncedValue<T>(value: T, delayMs: number) {
-  const [debounced, setDebounced] = React.useState(value);
+function parseDescription(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return { kind: "text" as const, text: "" };
 
-  React.useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
+  if (!trimmed.startsWith("* ")) {
+    return { kind: "text" as const, text: trimmed };
+  }
 
-  return debounced;
+  const items = trimmed
+    .split(/\s*\*\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.replace(/[,;\s]+$/g, ""))
+    .filter(Boolean);
+
+  if (items.length <= 1) {
+    return { kind: "text" as const, text: trimmed };
+  }
+
+  return { kind: "list" as const, items };
 }
 
-function statusLabel(status: string) {
-  if (status === "connected") return "Connected";
-  if (status === "reconnecting") return "Reconnecting";
-  if (status === "connecting") return "Connecting";
-  return "Disconnected";
+function renderInlineMarkdown(value: string, keyPrefix: string) {
+  const nodes: React.ReactNode[] = [];
+  let i = 0;
+  let part = 0;
+
+  while (i < value.length) {
+    const nextBold = value.indexOf("**", i);
+    const nextItalic = value.indexOf("*", i);
+
+    const next =
+      nextBold !== -1 && (nextItalic === -1 || nextBold < nextItalic)
+        ? { type: "bold" as const, idx: nextBold, len: 2 }
+        : nextItalic !== -1
+          ? { type: "italic" as const, idx: nextItalic, len: 1 }
+          : null;
+
+    if (!next) {
+      nodes.push(value.slice(i));
+      break;
+    }
+
+    if (next.idx > i) {
+      nodes.push(value.slice(i, next.idx));
+    }
+
+    const start = next.idx + next.len;
+    const end = value.indexOf(next.type === "bold" ? "**" : "*", start);
+    if (end === -1) {
+      nodes.push(value.slice(next.idx));
+      break;
+    }
+
+    const inner = value.slice(start, end);
+    const k = `${keyPrefix}-md-${part}`;
+    part += 1;
+
+    if (next.type === "bold") {
+      nodes.push(<strong key={k}>{inner}</strong>);
+      i = end + 2;
+    } else {
+      nodes.push(<em key={k}>{inner}</em>);
+      i = end + 1;
+    }
+  }
+
+  return nodes;
+}
+
+function renderDescription(value: string, keyPrefix: string) {
+  const normalized = value
+    .replace(/\s*-{6,}\s*/g, "\n\n---\n\n")
+    .replace(/\r\n/g, "\n");
+
+  const blocks = normalized
+    .split(/\n\n+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  return blocks.map((block, idx) => {
+    if (block === "---") {
+      return <hr key={`${keyPrefix}-hr-${idx}`} className="my-3" />;
+    }
+
+    const lines = block
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    return (
+      <p key={`${keyPrefix}-p-${idx}`} className={idx === 0 ? "" : "mt-2"}>
+        {lines.map((line, lineIdx) => (
+          <React.Fragment key={`${keyPrefix}-l-${idx}-${lineIdx}`}>
+            {lineIdx > 0 ? <br /> : null}
+            {renderInlineMarkdown(line, `${keyPrefix}-${idx}-${lineIdx}`)}
+          </React.Fragment>
+        ))}
+      </p>
+    );
+  });
 }
 
 export default function JobsClient({
@@ -76,6 +161,9 @@ export default function JobsClient({
   const [filters, setFilters] = React.useState<JobsFilters>(
     () => initialFilters ?? {},
   );
+  const [hasApplied, setHasApplied] = React.useState(false);
+  const [applyCount, setApplyCount] = React.useState(0);
+  const [appliedKeyword, setAppliedKeyword] = React.useState("");
   const [draft, setDraft] = React.useState<{
     title: string;
     company_name: string;
@@ -91,14 +179,23 @@ export default function JobsClient({
   const [limit, setLimit] = React.useState(() => initialLimit);
   const [offset, setOffset] = React.useState(() => initialOffset);
 
-  const debouncedTitle = useDebouncedValue(draft.title, 400);
-
   const wsKeyword = React.useMemo(() => {
-    const normalized = debouncedTitle.trim();
+    const normalized = appliedKeyword.trim();
     return normalized.length >= 2 ? normalized : "";
-  }, [debouncedTitle]);
+  }, [appliedKeyword]);
 
-  const { status: wsStatus, isRefreshing } = useJobsWebSocket(wsKeyword);
+  const {
+    status: wsStatus,
+    isRefreshing,
+    hasError: wsHasError,
+  } = useJobsWebSocket(wsKeyword, applyCount);
+
+  const wsIsLive =
+    Boolean(wsKeyword) &&
+    !wsHasError &&
+    (wsStatus === "connected" ||
+      wsStatus === "connecting" ||
+      wsStatus === "reconnecting");
 
   const { data, isPending, isFetching, isError, error, refetch } = useJobs({
     filters,
@@ -111,7 +208,9 @@ export default function JobsClient({
   const currentPage = Math.floor(offset / limit) + 1;
   const total = data?.total;
   const maxPage =
-    typeof total === "number" ? Math.max(1, Math.ceil(total / limit)) : undefined;
+    typeof total === "number"
+      ? Math.max(1, Math.ceil(total / limit))
+      : undefined;
 
   const canPrev = offset > 0;
   const canNext =
@@ -120,6 +219,9 @@ export default function JobsClient({
       : items.length === limit;
 
   function applyFilters(next: typeof draft) {
+    setHasApplied(true);
+    setApplyCount((c) => c + 1);
+    setAppliedKeyword(next.title.trim());
     setFilters({
       title: next.title.trim() || undefined,
       company_name: next.company_name.trim() || undefined,
@@ -191,7 +293,9 @@ export default function JobsClient({
             <Input
               className="mt-2"
               value={draft.skills}
-              onChange={(e) => setDraft((d) => ({ ...d, skills: e.target.value }))}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, skills: e.target.value }))
+              }
               placeholder="react, nextjs"
             />
           </div>
@@ -212,7 +316,10 @@ export default function JobsClient({
                     skills: "",
                   };
                   setDraft(cleared);
-                  applyFilters(cleared);
+                  setHasApplied(false);
+                  setAppliedKeyword("");
+                  setFilters({});
+                  setOffset(0);
                 }}
               >
                 Reset
@@ -229,22 +336,41 @@ export default function JobsClient({
             </div>
 
             <div className="flex items-center gap-3">
-              {wsKeyword ? (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Live</span>
-                  <span className="font-medium text-foreground">
-                    {statusLabel(wsStatus)}
-                  </span>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">
-                  Type 2+ chars to enable live updates
-                </div>
-              )}
+              {hasApplied ? (
+                <div className="flex flex-col gap-1">
+                  {wsKeyword ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs">
+                      <span
+                        className={`size-2 rounded-full ${
+                          wsIsLive ? "bg-emerald-500" : "bg-muted-foreground"
+                        }`}
+                        aria-hidden
+                      />
+                      <span className="text-muted-foreground">
+                        Live updates
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {wsIsLive ? "ON" : "OFF"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      Tambahkan keyword minimal 2 karakter untuk live update
+                    </div>
+                  )}
 
-              {isRefreshing ? (
-                <div className="text-xs text-muted-foreground">
-                  New jobs found — updating...
+                  {wsKeyword ? (
+                    <div className="text-xs text-muted-foreground">
+                      Sedang mencari loker lainnya — daftar akan bertambah
+                      secara real-time
+                    </div>
+                  ) : null}
+
+                  {isRefreshing ? (
+                    <div className="text-xs text-muted-foreground">
+                      Ada job baru — mengupdate...
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -330,7 +456,28 @@ export default function JobsClient({
 
                     {job.description ? (
                       <div className="pt-2 text-sm text-muted-foreground">
-                        {job.description}
+                        {(() => {
+                          const parsed = parseDescription(job.description);
+                          if (parsed.kind === "list") {
+                            return (
+                              <ul className="list-disc space-y-1 pl-5">
+                                {parsed.items.map((item, i) => (
+                                  <li key={`${job.id}-desc-${i}`}>
+                                    {renderInlineMarkdown(
+                                      item,
+                                      `${job.id}-desc-${i}`,
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            );
+                          }
+
+                          return renderDescription(
+                            parsed.text,
+                            `${job.id}-desc`,
+                          );
+                        })()}
                       </div>
                     ) : null}
 
