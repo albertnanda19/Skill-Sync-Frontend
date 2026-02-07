@@ -88,8 +88,12 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-export default function JobDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function JobDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const job = jobById[id] ?? jobById["product-frontend"];
 
   return (
