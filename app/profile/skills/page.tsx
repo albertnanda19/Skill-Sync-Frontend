@@ -30,10 +30,15 @@ export default function ManageSkillsPage() {
         <div className="grid gap-10">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="space-y-2">
-              <Badge variant="secondary" className="rounded-full">Manage skills</Badge>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Edit with restraint</h1>
+              <Badge variant="secondary" className="rounded-full">
+                Manage skills
+              </Badge>
+              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                Edit with restraint
+              </h1>
               <div className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                Your goal isn’t to list everything—it’s to represent what you’d actually use on the job.
+                Your goal isn’t to list everything—it’s to represent what you’d
+                actually use on the job.
               </div>
             </div>
             <Button variant="ghost" asChild>
@@ -74,13 +79,19 @@ export default function ManageSkillsPage() {
                   <Card key={s.name} className="rounded-[28px] p-6 shadow-sm">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-sm font-medium tracking-tight">{s.name}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">Proficiency: {s.level}%</div>
+                        <div className="text-sm font-medium tracking-tight">
+                          {s.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Proficiency: {s.level}%
+                        </div>
                       </div>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => setSkills((list) => list.filter((_, i) => i !== idx))}
+                        onClick={() =>
+                          setSkills((list) => list.filter((_, i) => i !== idx))
+                        }
                       >
                         <X className="size-4" />
                       </Button>
@@ -94,7 +105,11 @@ export default function ManageSkillsPage() {
                         step={1}
                         onValueChange={(value) =>
                           setSkills((list) =>
-                            list.map((item, i) => (i === idx ? { ...item, level: value[0] ?? item.level } : item))
+                            list.map((item, i) =>
+                              i === idx
+                                ? { ...item, level: value[0] ?? item.level }
+                                : item,
+                            ),
                           )
                         }
                       />
@@ -110,10 +125,15 @@ export default function ManageSkillsPage() {
 
             <aside className="space-y-4">
               <Card className="rounded-[28px] p-6 shadow-sm">
-                <div className="text-xs font-medium tracking-wide text-muted-foreground">GUIDE</div>
-                <div className="mt-2 text-lg font-semibold tracking-tight">Signal quality checklist</div>
+                <div className="text-xs font-medium tracking-wide text-muted-foreground">
+                  GUIDE
+                </div>
+                <div className="mt-2 text-lg font-semibold tracking-tight">
+                  Signal quality checklist
+                </div>
                 <div className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Aim for 8–12 skills. Keep levels honest—overstating makes match explanations feel wrong.
+                  Aim for 8–12 skills. Keep levels honest—overstating makes
+                  match explanations feel wrong.
                 </div>
               </Card>
             </aside>

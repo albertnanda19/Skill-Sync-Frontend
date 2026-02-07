@@ -4,7 +4,13 @@ import { ArrowRight, SlidersHorizontal, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 const jobs = [
@@ -38,8 +44,17 @@ const jobs = [
 ];
 
 function ScoreTag({ score }: { score: number }) {
-  const tone = score >= 80 ? "bg-primary/10 text-primary" : score >= 65 ? "bg-secondary/10 text-secondary" : "bg-muted text-foreground";
-  return <div className={`rounded-full px-3 py-1 text-xs font-medium ${tone}`}>{score}% match</div>;
+  const tone =
+    score >= 80
+      ? "bg-primary/10 text-primary"
+      : score >= 65
+        ? "bg-secondary/10 text-secondary"
+        : "bg-muted text-foreground";
+  return (
+    <div className={`rounded-full px-3 py-1 text-xs font-medium ${tone}`}>
+      {score}% match
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -52,8 +67,12 @@ export default function DashboardPage() {
             <Sparkles className="size-5" />
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight">Dashboard</div>
-            <div className="text-xs text-muted-foreground">Your matches, explained</div>
+            <div className="text-sm font-semibold tracking-tight">
+              Dashboard
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Your matches, explained
+            </div>
           </div>
         </div>
 
@@ -76,8 +95,12 @@ export default function DashboardPage() {
           <section className="space-y-6">
             <div className="flex items-end justify-between gap-6">
               <div>
-                <div className="text-xs font-medium tracking-wide text-muted-foreground">TODAY'S SHORTLIST</div>
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Matches you can act on</h1>
+                <div className="text-xs font-medium tracking-wide text-muted-foreground">
+                  TODAY'S SHORTLIST
+                </div>
+                <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+                  Matches you can act on
+                </h1>
               </div>
               <Button variant="ghost" asChild>
                 <Link href="/skills-gap">Refine Skills</Link>
@@ -86,10 +109,15 @@ export default function DashboardPage() {
 
             <div className="grid gap-4">
               {jobs.map((job) => (
-                <div key={job.id} className="rounded-[22px] border bg-card p-5 shadow-sm">
+                <div
+                  key={job.id}
+                  className="rounded-[22px] border bg-card p-5 shadow-sm"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
-                      <div className="text-sm font-medium tracking-tight">{job.title}</div>
+                      <div className="text-sm font-medium tracking-tight">
+                        {job.title}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {job.company} · {job.location}
                       </div>
@@ -99,20 +127,32 @@ export default function DashboardPage() {
 
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-2xl bg-muted/40 p-4">
-                      <div className="text-xs font-medium text-muted-foreground">Strong signals</div>
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Strong signals
+                      </div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {job.strengths.map((s) => (
-                          <Badge key={s} variant="secondary" className="rounded-full">
+                          <Badge
+                            key={s}
+                            variant="secondary"
+                            className="rounded-full"
+                          >
                             {s}
                           </Badge>
                         ))}
                       </div>
                     </div>
                     <div className="rounded-2xl bg-muted/40 p-4">
-                      <div className="text-xs font-medium text-muted-foreground">Likely gaps</div>
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Likely gaps
+                      </div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {job.gaps.map((g) => (
-                          <Badge key={g} className="rounded-full" variant="outline">
+                          <Badge
+                            key={g}
+                            className="rounded-full"
+                            variant="outline"
+                          >
                             {g}
                           </Badge>
                         ))}
@@ -142,7 +182,9 @@ export default function DashboardPage() {
                 <CardHeader className="px-0 pt-0">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <CardTitle className="text-lg tracking-tight">Your match snapshot</CardTitle>
+                      <CardTitle className="text-lg tracking-tight">
+                        Your match snapshot
+                      </CardTitle>
                       <CardDescription className="text-sm leading-6">
                         A quick read on why you’re scoring the way you are.
                       </CardDescription>
@@ -154,15 +196,27 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="grid gap-5 px-0">
                   <div className="rounded-2xl bg-muted/40 p-4">
-                    <div className="text-xs font-medium text-muted-foreground">Strongest cluster</div>
-                    <div className="mt-2 text-sm font-medium">Frontend craft</div>
-                    <div className="mt-1 text-sm text-muted-foreground">Component architecture, TS fluency, UI polish</div>
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Strongest cluster
+                    </div>
+                    <div className="mt-2 text-sm font-medium">
+                      Frontend craft
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Component architecture, TS fluency, UI polish
+                    </div>
                   </div>
 
                   <div className="rounded-2xl bg-muted/40 p-4">
-                    <div className="text-xs font-medium text-muted-foreground">Most common gap</div>
-                    <div className="mt-2 text-sm font-medium">Operational depth</div>
-                    <div className="mt-1 text-sm text-muted-foreground">Testing discipline, performance, data basics</div>
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Most common gap
+                    </div>
+                    <div className="mt-2 text-sm font-medium">
+                      Operational depth
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Testing discipline, performance, data basics
+                    </div>
                   </div>
 
                   <Separator />
