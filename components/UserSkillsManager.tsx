@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Check, ChevronsUpDown, Pencil, Plus, Save, X } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useCreateSkill } from "@/hooks/useCreateSkill";
 import { useCreateSkillCatalog } from "@/hooks/useCreateSkillCatalog";
+import { useDeleteSkill } from "@/hooks/useDeleteSkill";
 import { useSkillsCatalog } from "@/hooks/useSkillsCatalog";
 import { useUpdateSkill } from "@/hooks/useUpdateSkill";
 import { useUserSkills, type UserSkill } from "@/hooks/useUserSkills";
@@ -30,6 +39,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -49,6 +68,7 @@ export default function UserSkillsManager() {
   const createCatalogSkill = useCreateSkillCatalog();
   const createSkill = useCreateSkill();
   const updateSkill = useUpdateSkill();
+  const deleteSkill = useDeleteSkill();
 
   const [draftSkillId, setDraftSkillId] = React.useState<string>("");
   const [draftSkillName, setDraftSkillName] = React.useState<string>("");
@@ -64,6 +84,12 @@ export default function UserSkillsManager() {
   const [editSkillSearch, setEditSkillSearch] = React.useState("");
   const [editProficiency, setEditProficiency] = React.useState<number>(3);
   const [editYears, setEditYears] = React.useState<number>(0);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const skills = skillsQuery.data ?? [];
   const catalog = catalogQuery.data ?? [];
@@ -164,7 +190,10 @@ export default function UserSkillsManager() {
   }
 
   const isBusy =
-    skillsQuery.isFetching || createSkill.isPending || updateSkill.isPending;
+    skillsQuery.isFetching ||
+    createSkill.isPending ||
+    updateSkill.isPending ||
+    deleteSkill.isPending;
 
   return (
     <div className="grid gap-10">
@@ -371,6 +400,7 @@ export default function UserSkillsManager() {
             <div className="grid gap-4">
               {skills.map((s) => {
                 const isEditing = editingId === s.id;
+                const isOptimistic = s.id.startsWith("optimistic-");
 
                 return (
                   <Card key={s.id} className="rounded-[28px] p-6 shadow-sm">
@@ -390,14 +420,27 @@ export default function UserSkillsManager() {
                             </div>
                           </div>
 
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => startEdit(s)}
-                            disabled={isBusy}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => startEdit(s)}
+                              disabled={isBusy}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setDeleteTarget({ id: s.id, name: s.name });
+                                setDeleteDialogOpen(true);
+                              }}
+                              disabled={isBusy || isOptimistic}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         <div>
@@ -627,6 +670,52 @@ export default function UserSkillsManager() {
           </Card>
         </aside>
       </div>
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (deleteSkill.isPending) return;
+          setDeleteDialogOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete skill?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `This will remove “${deleteTarget.name}” from your profile.`
+                : "This will remove the skill from your profile."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSkill.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!deleteTarget || deleteSkill.isPending}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!deleteTarget) return;
+
+                try {
+                  if (editingId === deleteTarget.id) cancelEdit();
+                  await deleteSkill.mutateAsync({ id: deleteTarget.id });
+                  toast.success("Skill deleted");
+                  setDeleteDialogOpen(false);
+                  setDeleteTarget(null);
+                } catch {
+                  toast.error("Failed to delete skill");
+                }
+              }}
+            >
+              {deleteSkill.isPending ? <Spinner className="size-4" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
