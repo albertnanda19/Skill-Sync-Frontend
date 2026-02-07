@@ -3,31 +3,39 @@ import { NextResponse } from "next/server";
 
 import { backendApi } from "@/lib/axios";
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
-    const body = (await req.json()) as Record<string, unknown>;
+    const cookieStore = await cookies();
+    const refreshToken = cookieStore.get("refresh_token")?.value;
+
+    if (!refreshToken) {
+      return NextResponse.json({ message: "Missing refresh token" }, { status: 401 });
+    }
 
     const { data } = await backendApi.post<{
       status: number;
       message: string;
-      data: {
-        access_token: string;
-        refresh_token: string;
-        user?: unknown;
-      };
-    }>("/api/v1/auth/register", body);
+      data: { access_token: string; refresh_token: string };
+    }>(
+      "/api/v1/auth/refresh",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      },
+    );
 
     const accessToken = data?.data?.access_token;
-    const refreshToken = data?.data?.refresh_token;
+    const newRefreshToken = data?.data?.refresh_token;
 
-    if (!accessToken || !refreshToken) {
+    if (!accessToken || !newRefreshToken) {
       return NextResponse.json(
-        { message: "Invalid register response" },
+        { message: "Invalid refresh response" },
         { status: 500 },
       );
     }
 
-    const cookieStore = await cookies();
     const secure = process.env.NODE_ENV === "production";
 
     cookieStore.set("access_token", accessToken, {
@@ -37,7 +45,7 @@ export async function POST(req: Request) {
       path: "/",
     });
 
-    cookieStore.set("refresh_token", refreshToken, {
+    cookieStore.set("refresh_token", newRefreshToken, {
       httpOnly: true,
       secure,
       sameSite: "lax",
