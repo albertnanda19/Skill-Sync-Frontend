@@ -50,7 +50,7 @@ export default function ProfilePage() {
                       </CardDescription>
                     </div>
                     <Button size="sm" variant="outline" asChild>
-                      <Link href="/profile/skills">
+                      <Link href="/users/skills">
                         <Pencil className="size-4" />
                         Edit Skills
                       </Link>

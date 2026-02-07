@@ -39,3 +39,42 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as { name?: unknown };
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+
+    if (!name) {
+      return NextResponse.json({ message: "Name is required" }, { status: 400 });
+    }
+
+    const { data } = await backendApi.post<
+      BackendResponse<{ id: string; name: string }>
+    >("/api/v1/skills", { name });
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (error: unknown) {
+    const status =
+      (typeof error === "object" &&
+        error &&
+        "response" in error &&
+        (error as { response?: { status?: number } }).response?.status) ||
+      500;
+
+    const message =
+      (typeof error === "object" &&
+        error &&
+        "response" in error &&
+        (error as { response?: { data?: { message?: unknown } } }).response?.data
+          ?.message) ||
+      "Server error";
+
+    return NextResponse.json(
+      {
+        message: typeof message === "string" ? message : "Server error",
+      },
+      { status: typeof status === "number" ? status : 500 },
+    );
+  }
+}

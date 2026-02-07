@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-const missing = [
+const missing: Array<{
+  skill: string;
+  impact: "High" | "Medium" | "Low";
+  reason: string;
+}> = [
   {
     skill: "Testing discipline",
     impact: "High",
@@ -124,7 +128,7 @@ export default function SkillsGapPage() {
                 </div>
                 <div className="mt-6 grid gap-2">
                   <Button asChild>
-                    <Link href="/profile/skills">
+                    <Link href="/users/skills">
                       Add These Skills
                       <ArrowRight className="size-4" />
                     </Link>

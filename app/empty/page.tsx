@@ -3,7 +3,14 @@ import Link from "next/link";
 import { ArrowRight, Inbox } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default function EmptyStatePage() {
   return (
@@ -17,13 +24,14 @@ export default function EmptyStatePage() {
             </EmptyMedia>
             <EmptyTitle>No matches yet</EmptyTitle>
             <EmptyDescription>
-              This usually means your skills are too broad or too thin. Tighten your profile and try again.
+              This usually means your skills are too broad or too thin. Tighten
+              your profile and try again.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild>
-                <Link href="/profile/skills">
+                <Link href="/users/skills">
                   Add skills
                   <ArrowRight className="size-4" />
                 </Link>

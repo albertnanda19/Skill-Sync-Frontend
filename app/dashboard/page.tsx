@@ -229,7 +229,7 @@ export default function DashboardPage() {
                       </Link>
                     </Button>
                     <Button variant="outline" asChild>
-                      <Link href="/profile/skills">Manage Skills</Link>
+                      <Link href="/users/skills">Manage Skills</Link>
                     </Button>
                   </div>
                 </CardContent>

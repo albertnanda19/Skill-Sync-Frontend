@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Pencil, Plus, Save, X } from "lucide-react";
+import { Check, ChevronsUpDown, Pencil, Plus, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { useCreateSkill } from "@/hooks/useCreateSkill";
+import { useCreateSkillCatalog } from "@/hooks/useCreateSkillCatalog";
 import { useSkillsCatalog } from "@/hooks/useSkillsCatalog";
 import { useUpdateSkill } from "@/hooks/useUpdateSkill";
 import { useUserSkills, type UserSkill } from "@/hooks/useUserSkills";
@@ -17,12 +18,18 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -39,20 +46,39 @@ function clampYears(value: number) {
 export default function UserSkillsManager() {
   const skillsQuery = useUserSkills();
   const catalogQuery = useSkillsCatalog();
+  const createCatalogSkill = useCreateSkillCatalog();
   const createSkill = useCreateSkill();
   const updateSkill = useUpdateSkill();
 
   const [draftSkillId, setDraftSkillId] = React.useState<string>("");
+  const [draftSkillName, setDraftSkillName] = React.useState<string>("");
+  const [draftSkillOpen, setDraftSkillOpen] = React.useState(false);
+  const [draftSkillSearch, setDraftSkillSearch] = React.useState("");
   const [draftProficiency, setDraftProficiency] = React.useState<number>(3);
   const [draftYears, setDraftYears] = React.useState<number>(0);
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editSkillId, setEditSkillId] = React.useState<string>("");
   const [editName, setEditName] = React.useState("");
+  const [editSkillOpen, setEditSkillOpen] = React.useState(false);
+  const [editSkillSearch, setEditSkillSearch] = React.useState("");
   const [editProficiency, setEditProficiency] = React.useState<number>(3);
   const [editYears, setEditYears] = React.useState<number>(0);
 
   const skills = skillsQuery.data ?? [];
+  const catalog = catalogQuery.data ?? [];
+
+  const draftMatches = React.useMemo(() => {
+    const q = draftSkillSearch.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter((s) => s.name.toLowerCase().includes(q));
+  }, [catalog, draftSkillSearch]);
+
+  const editMatches = React.useMemo(() => {
+    const q = editSkillSearch.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter((s) => s.name.toLowerCase().includes(q));
+  }, [catalog, editSkillSearch]);
 
   function startEdit(skill: UserSkill) {
     setEditingId(skill.id);
@@ -68,6 +94,8 @@ export default function UserSkillsManager() {
     setEditingId(null);
     setEditSkillId("");
     setEditName("");
+    setEditSkillSearch("");
+    setEditSkillOpen(false);
     setEditProficiency(3);
     setEditYears(0);
   }
@@ -85,7 +113,7 @@ export default function UserSkillsManager() {
     }
 
     const selectedSkillName =
-      catalogQuery.data?.find((s) => s.id === skillId)?.name ?? "";
+      catalog.find((s) => s.id === skillId)?.name ?? draftSkillName;
 
     try {
       await createSkill.mutateAsync({
@@ -96,6 +124,9 @@ export default function UserSkillsManager() {
       });
       toast.success("Skill added");
       setDraftSkillId("");
+      setDraftSkillName("");
+      setDraftSkillSearch("");
+      setDraftSkillOpen(false);
       setDraftProficiency(3);
       setDraftYears(0);
     } catch {
@@ -164,22 +195,101 @@ export default function UserSkillsManager() {
             >
               <div className="grid gap-2">
                 <Label>Skill</Label>
-                <Select
-                  value={draftSkillId}
-                  onValueChange={setDraftSkillId}
-                  disabled={isBusy || catalogQuery.isLoading}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a skill" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(catalogQuery.data ?? []).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={draftSkillOpen} onOpenChange={setDraftSkillOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={draftSkillOpen}
+                      className="w-full justify-between"
+                      disabled={isBusy || catalogQuery.isLoading}
+                    >
+                      <span className="truncate">
+                        {draftSkillId
+                          ? catalog.find((s) => s.id === draftSkillId)?.name ||
+                            draftSkillName
+                          : "Select a skill"}
+                      </span>
+                      <ChevronsUpDown className="size-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-(--radix-popover-trigger-width) p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Search skill…"
+                        value={draftSkillSearch}
+                        onValueChange={setDraftSkillSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-auto w-full justify-start px-2 py-2"
+                            disabled={
+                              createCatalogSkill.isPending ||
+                              !draftSkillSearch.trim()
+                            }
+                            onClick={async () => {
+                              const term = draftSkillSearch.trim();
+                              if (!term) return;
+                              try {
+                                const res =
+                                  await createCatalogSkill.mutateAsync({
+                                    name: term,
+                                  });
+                                const created = res?.data;
+                                if (!created?.id) {
+                                  toast.error("Failed to create skill");
+                                  return;
+                                }
+                                toast.success("Skill created");
+                                setDraftSkillId(created.id);
+                                setDraftSkillName(created.name);
+                                setDraftSkillOpen(false);
+                              } catch {
+                                toast.error("Failed to create skill");
+                              }
+                            }}
+                          >
+                            {createCatalogSkill.isPending ? (
+                              <Spinner className="size-4" />
+                            ) : (
+                              <Plus className="size-4" />
+                            )}
+                            Add "{draftSkillSearch.trim()}"
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {draftMatches.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.name}
+                              onSelect={() => {
+                                setDraftSkillId(s.id);
+                                setDraftSkillName(s.name);
+                                setDraftSkillOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={
+                                  draftSkillId === s.id
+                                    ? "size-4 opacity-100"
+                                    : "size-4 opacity-0"
+                                }
+                              />
+                              {s.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="grid gap-2">
@@ -309,28 +419,109 @@ export default function UserSkillsManager() {
                         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
                           <div className="grid gap-2">
                             <Label>Skill</Label>
-                            <Select
-                              value={editSkillId}
-                              onValueChange={(v) => {
-                                setEditSkillId(v);
-                                const nextName =
-                                  catalogQuery.data?.find((x) => x.id === v)
-                                    ?.name ?? "";
-                                if (nextName) setEditName(nextName);
-                              }}
-                              disabled={isBusy || catalogQuery.isLoading}
+                            <Popover
+                              open={editSkillOpen}
+                              onOpenChange={setEditSkillOpen}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a skill" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(catalogQuery.data ?? []).map((opt) => (
-                                  <SelectItem key={opt.id} value={opt.id}>
-                                    {opt.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={editSkillOpen}
+                                  className="w-full justify-between"
+                                  disabled={isBusy || catalogQuery.isLoading}
+                                >
+                                  <span className="truncate">
+                                    {editSkillId
+                                      ? catalog.find(
+                                          (s2) => s2.id === editSkillId,
+                                        )?.name || editName
+                                      : "Select a skill"}
+                                  </span>
+                                  <ChevronsUpDown className="size-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-(--radix-popover-trigger-width) p-0"
+                                align="start"
+                              >
+                                <Command>
+                                  <CommandInput
+                                    placeholder="Search skill…"
+                                    value={editSkillSearch}
+                                    onValueChange={setEditSkillSearch}
+                                  />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="h-auto w-full justify-start px-2 py-2"
+                                        disabled={
+                                          createCatalogSkill.isPending ||
+                                          !editSkillSearch.trim()
+                                        }
+                                        onClick={async () => {
+                                          const term = editSkillSearch.trim();
+                                          if (!term) return;
+                                          try {
+                                            const res =
+                                              await createCatalogSkill.mutateAsync(
+                                                { name: term },
+                                              );
+                                            const created = res?.data;
+                                            if (!created?.id) {
+                                              toast.error(
+                                                "Failed to create skill",
+                                              );
+                                              return;
+                                            }
+                                            toast.success("Skill created");
+                                            setEditSkillId(created.id);
+                                            setEditName(created.name);
+                                            setEditSkillOpen(false);
+                                          } catch {
+                                            toast.error(
+                                              "Failed to create skill",
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        {createCatalogSkill.isPending ? (
+                                          <Spinner className="size-4" />
+                                        ) : (
+                                          <Plus className="size-4" />
+                                        )}
+                                        Add "{editSkillSearch.trim()}"
+                                      </Button>
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {editMatches.map((opt) => (
+                                        <CommandItem
+                                          key={opt.id}
+                                          value={opt.name}
+                                          onSelect={() => {
+                                            setEditSkillId(opt.id);
+                                            setEditName(opt.name);
+                                            setEditSkillOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={
+                                              editSkillId === opt.id
+                                                ? "size-4 opacity-100"
+                                                : "size-4 opacity-0"
+                                            }
+                                          />
+                                          {opt.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
                           <div className="flex items-center justify-end gap-2">
