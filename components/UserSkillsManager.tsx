@@ -165,20 +165,12 @@ export default function UserSkillsManager() {
 
     if (!editingId) return;
 
-    const name = editName.trim();
     const proficiencyLevel = clampProficiency(editProficiency);
     const yearsExperience = clampYears(editYears);
-
-    if (!editSkillId) {
-      toast.error("Select a skill");
-      return;
-    }
 
     try {
       await updateSkill.mutateAsync({
         id: editingId,
-        skillId: editSkillId,
-        ...(name ? { name } : {}),
         proficiencyLevel,
         yearsExperience,
       });

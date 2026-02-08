@@ -19,6 +19,8 @@ export async function PUT(
   context: { params: { id: string } },
 ) {
   try {
+    const url = new URL(req.url);
+    const rawId = url.pathname.split("/").pop() ?? "";
     const { id } = context.params;
     const accessToken = await getAccessToken();
 
@@ -26,10 +28,16 @@ export async function PUT(
       return NextResponse.json({ message: "Missing access token" }, { status: 401 });
     }
 
+    const targetId = rawId || id;
+
+    if (!targetId) {
+      return NextResponse.json({ message: "Missing id" }, { status: 400 });
+    }
+
     const body = (await req.json()) as Record<string, unknown>;
 
     const { data } = await backendApi.put<BackendResponse<unknown>>(
-      `/api/v1/users/me/skills/${encodeURIComponent(id)}`,
+      `/api/v1/users/me/skills/${targetId}`,
       body,
       {
         headers: {

@@ -7,10 +7,8 @@ import type { UserSkill } from "@/hooks/useUserSkills";
 
 export type UpdateSkillInput = {
   id: string;
-  skillId?: string;
-  name?: string;
   proficiencyLevel: number;
-  yearsExperience?: number;
+  yearsExperience: number;
 };
 
 export type UpdateSkillResponse = {
@@ -31,18 +29,11 @@ export function useUpdateSkill() {
     mutationFn: async ({ id, ...payload }) => {
       const body: Record<string, unknown> = {
         proficiency_level: payload.proficiencyLevel,
+        years_experience: payload.yearsExperience,
       };
 
-      if (typeof payload.skillId === "string" && payload.skillId) {
-        body.skill_id = payload.skillId;
-      }
-
-      if (typeof payload.yearsExperience === "number") {
-        body.years_experience = payload.yearsExperience;
-      }
-
       const { data } = await appApi.put<UpdateSkillResponse>(
-        `/api/users/me/skills/${encodeURIComponent(id)}`,
+        `/api/users/me/skills/${id}`,
         body,
       );
       return data;
@@ -59,12 +50,8 @@ export function useUpdateSkill() {
           s.id === payload.id
             ? {
                 ...s,
-                ...(payload.name ? { name: payload.name } : {}),
-                ...(payload.skillId ? { skillId: payload.skillId } : {}),
                 proficiencyLevel: payload.proficiencyLevel,
-                ...(typeof payload.yearsExperience === "number"
-                  ? { yearsExperience: payload.yearsExperience }
-                  : {}),
+                yearsExperience: payload.yearsExperience,
               }
             : s,
         ),
