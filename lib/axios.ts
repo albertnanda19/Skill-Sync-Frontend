@@ -2,6 +2,7 @@ import axios from "axios";
 
 export const backendApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -9,6 +10,7 @@ export const backendApi = axios.create({
 
 export const appApi = axios.create({
   baseURL: "",
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },

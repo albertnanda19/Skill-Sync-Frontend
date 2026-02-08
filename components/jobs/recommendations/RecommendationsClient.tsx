@@ -1,60 +1,85 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 
 import RecommendationCard, {
   type JobRecommendation,
-} from "@/components/jobs/recommendations/RecommendationCard";
-import RecommendationsEmptyState from "@/components/jobs/recommendations/RecommendationsEmptyState";
-import RecommendationsSkeleton from "@/components/jobs/recommendations/RecommendationsSkeleton";
-import JobsSectionNav from "@/components/jobs/JobsSectionNav";
+} from "./RecommendationCard";
+import RecommendationsEmptyState from "./RecommendationsEmptyState";
+import RecommendationsSkeleton from "./RecommendationsSkeleton";
+import JobsSectionNav from "../JobsSectionNav";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { appApi } from "@/lib/axios";
 
-type ViewState = "loading" | "data" | "empty";
+type BackendRecommendation = {
+  job_id: string;
+  title?: string;
+  company_name?: string;
+  location?: string;
+  job_url?: string;
+  match_score?: number;
+  missing_skills?: string[];
+};
 
-const mockRecommendations: JobRecommendation[] = [
-  {
-    id: "1",
-    title: "Backend Developer",
-    company: "Tech Corp",
-    location: "Jakarta",
-    matchScore: 87,
-    missingSkills: ["Docker", "Kubernetes"],
-    jobUrl: "#",
-  },
-  {
-    id: "2",
-    title: "Fullstack Engineer",
-    company: "Nimbus Labs",
-    location: "Remote (SEA)",
-    matchScore: 78,
-    missingSkills: ["PostgreSQL"],
-    jobUrl: "#",
-  },
-  {
-    id: "3",
-    title: "Platform Engineer",
-    company: "Arc Systems",
-    location: "Jakarta (Hybrid)",
-    matchScore: 83,
-    missingSkills: [],
-    jobUrl: "#",
-  },
-];
+type BackendResponse<T> = {
+  status: number;
+  message: string;
+  data: T;
+};
+
+async function fetchRecommendations() {
+  const { data } = await appApi.get<BackendResponse<BackendRecommendation[]>>(
+    "/api/jobs/recommendations",
+  );
+  return data.data;
+}
 
 export default function RecommendationsClient() {
-  const [state, setState] = React.useState<ViewState>("loading");
-  const [items, setItems] = React.useState<JobRecommendation[]>([]);
+  const router = useRouter();
+
+  const query = useQuery({
+    queryKey: ["job-recommendations"],
+    queryFn: fetchRecommendations,
+    staleTime: 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  });
+
+  const recommendations = React.useMemo<JobRecommendation[]>(() => {
+    const data = query.data ?? [];
+
+    const mapped = data.map((item) => ({
+      id: item.job_id,
+      title: item.title ?? "",
+      company: item.company_name ?? "",
+      location: item.location ?? "",
+      matchScore: typeof item.match_score === "number" ? item.match_score : 0,
+      missingSkills: Array.isArray(item.missing_skills)
+        ? item.missing_skills
+        : [],
+      jobUrl: item.job_url ?? "",
+    }));
+
+    return mapped.sort((a, b) => b.matchScore - a.matchScore);
+  }, [query.data]);
 
   React.useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setItems(mockRecommendations);
-      setState("data");
-    }, 1000);
+    const status =
+      (typeof query.error === "object" &&
+        query.error &&
+        "response" in query.error &&
+        (query.error as { response?: { status?: number } }).response?.status) ||
+      null;
 
-    return () => window.clearTimeout(timer);
-  }, []);
+    if (status === 401) {
+      router.replace("/auth/refresh?next=/jobs/recommendations");
+    }
+  }, [query.error, router]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -91,11 +116,12 @@ export default function RecommendationsClient() {
           <div className="grid gap-3 md:grid-cols-[1.1fr_0.9fr] md:items-center">
             <div className="space-y-1">
               <div className="text-sm font-medium tracking-tight">
-                Your recommendations will get sharper over time.
+                Your recommendations update as your skills evolve.
               </div>
               <div className="text-sm leading-6 text-muted-foreground">
-                Soon this page will be powered by skill matching, role preference,
-                and real-time job signals. For now, you’re seeing mock data.
+                We rank jobs by how closely they match your current skill
+                profile, so keeping your skills up to date improves the quality
+                of results.
               </div>
             </div>
 
@@ -115,60 +141,34 @@ export default function RecommendationsClient() {
 
         <div className="flex items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            Curated for you — adjust skills to improve match quality.
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-              onClick={() => {
-                setState("loading");
-                window.setTimeout(() => {
-                  setItems(mockRecommendations);
-                  setState("data");
-                }, 700);
-              }}
-            >
-              Loading
-            </button>
-            <button
-              type="button"
-              className="rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-              onClick={() => {
-                setState("loading");
-                window.setTimeout(() => {
-                  setItems([]);
-                  setState("empty");
-                }, 700);
-              }}
-            >
-              Empty
-            </button>
-            <button
-              type="button"
-              className="rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-              onClick={() => {
-                setState("loading");
-                window.setTimeout(() => {
-                  setItems(mockRecommendations);
-                  setState("data");
-                }, 700);
-              }}
-            >
-              Data
-            </button>
+            Recommendations ranked by your skill match
+            {recommendations.length ? (
+              <span className="ml-2">
+                · Showing {recommendations.length} personalized jobs
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {state === "loading" ? (
+      {query.isLoading ? (
         <RecommendationsSkeleton />
-      ) : state === "empty" ? (
+      ) : query.isError ? (
+        <div className="rounded-[28px] border bg-card px-6 py-12 shadow-sm">
+          <div className="space-y-4">
+            <div className="text-sm font-medium">
+              Failed to load recommendations
+            </div>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => query.refetch()}>Retry</Button>
+            </div>
+          </div>
+        </div>
+      ) : recommendations.length === 0 ? (
         <RecommendationsEmptyState />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((rec) => (
+          {recommendations.map((rec) => (
             <RecommendationCard key={rec.id} recommendation={rec} />
           ))}
         </div>

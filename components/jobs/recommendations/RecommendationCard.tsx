@@ -17,18 +17,67 @@ export type JobRecommendation = {
 };
 
 function MatchBadge({ score }: { score: number }) {
+  const rounded = Math.round(score);
+
+  const tier =
+    rounded >= 85
+      ? "strong"
+      : rounded >= 70
+        ? "good"
+        : rounded >= 50
+          ? "moderate"
+          : "low";
+
   const className =
-    score >= 80
-      ? "bg-linear-to-r from-emerald-500/15 to-sky-500/15 text-foreground border-emerald-500/25"
-      : "bg-muted text-foreground border-border";
+    tier === "strong"
+      ? "bg-linear-to-r from-indigo-600/15 to-violet-600/15 text-foreground border-indigo-600/25"
+      : tier === "good"
+        ? "bg-sky-500/10 text-foreground border-sky-500/20"
+        : tier === "moderate"
+          ? "bg-muted/70 text-foreground border-border"
+          : "bg-muted text-muted-foreground border-border";
 
   return (
     <Badge
       variant="outline"
-      className={`rounded-full px-3 py-1 text-xs font-medium ${className}`}
+      className={`rounded-full px-4 py-1.5 text-sm font-semibold tracking-tight ${className}`}
     >
-      {Math.round(score)}% Match
+      {rounded}% Match
     </Badge>
+  );
+}
+
+function ScoreBar({ score }: { score: number }) {
+  const clamped = Math.max(0, Math.min(100, score));
+  const rounded = Math.round(clamped);
+
+  const tier =
+    rounded >= 85
+      ? "strong"
+      : rounded >= 70
+        ? "good"
+        : rounded >= 50
+          ? "moderate"
+          : "low";
+
+  const barClassName =
+    tier === "strong"
+      ? "bg-linear-to-r from-indigo-600 to-violet-600"
+      : tier === "good"
+        ? "bg-linear-to-r from-sky-500 to-indigo-500"
+        : tier === "moderate"
+          ? "bg-linear-to-r from-slate-400 to-slate-500"
+          : "bg-linear-to-r from-slate-300 to-slate-400";
+
+  return (
+    <div className="mt-3">
+      <div className="h-2 w-full rounded-full bg-muted/70">
+        <div
+          className={`h-2 rounded-full transition-[width] duration-300 ${barClassName}`}
+          style={{ width: `${rounded}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -54,15 +103,25 @@ export default function RecommendationCard({
         <MatchBadge score={recommendation.matchScore} />
       </div>
 
+      <ScoreBar score={recommendation.matchScore} />
+
       {missing.length ? (
-        <div className="mt-4 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Missing: <span className="text-foreground">{missing.join(", ")}</span>
+        <div className="mt-4 space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            Missing skills:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {missing.map((skill) => (
+              <span
+                key={skill}
+                className="rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="mt-4 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Missing: <span className="text-foreground">None</span>
-        </div>
-      )}
+      ) : null}
 
       <div className="mt-5 flex items-center justify-between gap-3">
         <div className="text-xs text-muted-foreground">Open in new tab</div>
