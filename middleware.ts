@@ -123,10 +123,10 @@ export async function middleware(req: NextRequest) {
     const isExpired = nowSeconds >= exp;
     if (isExpired) return NextResponse.next();
 
-    const dashboardUrl = req.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    dashboardUrl.search = "";
-    return NextResponse.redirect(dashboardUrl);
+    const jobsUrl = req.nextUrl.clone();
+    jobsUrl.pathname = "/jobs";
+    jobsUrl.search = "";
+    return NextResponse.redirect(jobsUrl);
   }
 
   if (!isProtectedPath(pathname)) {

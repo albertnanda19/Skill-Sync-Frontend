@@ -7,7 +7,14 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export default function Error({ reset }: { reset: () => void }) {
   return (
@@ -21,15 +28,16 @@ export default function Error({ reset }: { reset: () => void }) {
             </EmptyMedia>
             <EmptyTitle>Something broke</EmptyTitle>
             <EmptyDescription>
-              Try again, or go back to the dashboard. If this keeps happening, it’s likely a UI state mismatch.
+              Try again, or go back to jobs. If this keeps happening, it’s
+              likely a UI state mismatch.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button onClick={() => reset()}>Retry</Button>
               <Button variant="outline" asChild>
-                <Link href="/dashboard">
-                  Go to dashboard
+                <Link href="/jobs">
+                  Go to jobs
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>

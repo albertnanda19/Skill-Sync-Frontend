@@ -38,7 +38,7 @@ export default function LoginPage() {
           <CardHeader className="space-y-2">
             <CardTitle className="text-2xl tracking-tight">Sign in</CardTitle>
             <CardDescription className="text-sm leading-6">
-              Continue to your dashboard and review your latest matches.
+              Continue to your jobs feed and review your latest matches.
             </CardDescription>
           </CardHeader>
           <CardContent>

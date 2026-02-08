@@ -14,8 +14,8 @@ export default function RefreshAuthPage() {
 
     async function refresh() {
       try {
-        const rawNext = searchParams.get("next") || "/dashboard";
-        const next = rawNext.startsWith("/") ? rawNext : "/dashboard";
+        const rawNext = searchParams.get("next") || "/jobs";
+        const next = rawNext.startsWith("/") ? rawNext : "/jobs";
 
         const res = await fetch("/api/auth/refresh-token", {
           method: "POST",
@@ -33,8 +33,8 @@ export default function RefreshAuthPage() {
           router.replace(next);
         }
       } catch {
-        const rawNext = searchParams.get("next") || "/dashboard";
-        const next = rawNext.startsWith("/") ? rawNext : "/dashboard";
+        const rawNext = searchParams.get("next") || "/jobs";
+        const next = rawNext.startsWith("/") ? rawNext : "/jobs";
         router.replace(`/login?next=${encodeURIComponent(next)}`);
       }
     }

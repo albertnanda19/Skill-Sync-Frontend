@@ -62,7 +62,7 @@ export default function RegisterForm() {
       },
       {
         onSuccess: () => {
-          router.replace("/dashboard");
+          router.replace("/onboarding");
         },
       },
     );
@@ -151,8 +151,8 @@ export default function RegisterForm() {
       </Button>
 
       <div className="text-xs leading-5 text-muted-foreground">
-        By creating an account, you agree to keep your profile accurate for better
-        match insights.
+        By creating an account, you agree to keep your profile accurate for
+        better match insights.
       </div>
     </form>
   );

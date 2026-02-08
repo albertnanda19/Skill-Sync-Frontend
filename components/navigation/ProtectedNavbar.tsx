@@ -18,7 +18,6 @@ export default function ProtectedNavbar() {
 
   const activeGroup = React.useMemo(() => {
     if (pathname.startsWith("/jobs")) return "jobs";
-    if (pathname.startsWith("/dashboard")) return "dashboard";
     if (pathname.startsWith("/users/skills")) return "skills";
     return null;
   }, [pathname]);
@@ -46,7 +45,7 @@ export default function ProtectedNavbar() {
           </button>
 
           <Link
-            href="/dashboard"
+            href="/jobs"
             className="text-base font-semibold tracking-tight text-foreground"
             onClick={closeAll}
           >
@@ -57,16 +56,6 @@ export default function ProtectedNavbar() {
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <Link
-            href="/dashboard"
-            className={cn(
-              "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground",
-              activeGroup === "dashboard" && "bg-accent text-foreground",
-            )}
-            onClick={closeAll}
-          >
-            Dashboard
-          </Link>
           <Link
             href="/users/skills"
             className={cn(
@@ -104,17 +93,6 @@ export default function ProtectedNavbar() {
       >
         <div className="mx-auto w-full max-w-6xl px-4 py-3">
           <div className="grid gap-2">
-            <Link
-              href="/dashboard"
-              className={cn(
-                "rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary",
-                activeGroup === "dashboard" && "bg-primary/10 text-primary",
-              )}
-              onClick={closeAll}
-            >
-              Dashboard
-            </Link>
-
             <Link
               href="/users/skills"
               className={cn(

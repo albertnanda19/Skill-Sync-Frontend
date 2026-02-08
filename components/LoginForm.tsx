@@ -13,7 +13,10 @@ function getErrorMessage(error: unknown): string {
   if (typeof error === "string") return error;
 
   if (error && typeof error === "object") {
-    if ("message" in error && typeof (error as { message?: unknown }).message === "string") {
+    if (
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
       return (error as { message: string }).message;
     }
 
@@ -22,7 +25,8 @@ function getErrorMessage(error: unknown): string {
     };
 
     const serverMessage = maybeAxios.response?.data?.message;
-    if (typeof serverMessage === "string" && serverMessage.length > 0) return serverMessage;
+    if (typeof serverMessage === "string" && serverMessage.length > 0)
+      return serverMessage;
   }
 
   return "Something went wrong. Please try again.";
@@ -47,7 +51,7 @@ export default function LoginForm() {
       { email, password },
       {
         onSuccess: () => {
-          router.replace("/dashboard");
+          router.replace("/jobs");
         },
       },
     );

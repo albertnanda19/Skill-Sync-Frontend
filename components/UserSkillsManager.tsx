@@ -205,7 +205,7 @@ export default function UserSkillsManager() {
             </div>
           </div>
           <Button variant="ghost" asChild>
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/jobs">Back to jobs</Link>
           </Button>
         </div>
       </div>
