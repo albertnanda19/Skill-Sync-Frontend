@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { ArrowRight, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +27,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { useCreateSkillCatalog } from "@/hooks/useCreateSkillCatalog";
+import { useSkillsCatalog } from "@/hooks/useSkillsCatalog";
+import { useSubmitOnboarding } from "@/hooks/useSubmitOnboarding";
 
 const steps = ["Experience", "Roles", "Skills"] as const;
 
@@ -61,10 +89,128 @@ function StepPill({
 }
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [index, setIndex] = React.useState(0);
+
+  const submitOnboarding = useSubmitOnboarding();
+  const skillsCatalogQuery = useSkillsCatalog();
+  const createSkillCatalog = useCreateSkillCatalog();
+
+  const [experienceLevel, setExperienceLevel] = React.useState<
+    "junior" | "mid" | "senior"
+  >("mid");
+  const [preferredRoles, setPreferredRoles] = React.useState<Set<string>>(
+    () => new Set(["Frontend Engineer"]),
+  );
+  const [customRole, setCustomRole] = React.useState("");
+
+  const [draftSkillId, setDraftSkillId] = React.useState<string>("");
+  const [draftSkillName, setDraftSkillName] = React.useState<string>("");
+  const [draftSkillOpen, setDraftSkillOpen] = React.useState(false);
+  const [draftSkillSearch, setDraftSkillSearch] = React.useState("");
+  const [draftProficiency, setDraftProficiency] = React.useState<number>(3);
+  const [draftYears, setDraftYears] = React.useState<number>(1);
+
+  const [skills, setSkills] = React.useState<
+    Array<{
+      skill_id: string;
+      name: string;
+      proficiency_level: number;
+      years_experience: number;
+    }>
+  >([]);
 
   const step: StepKey = steps[index]!;
   const progressValue = ((index + 1) / steps.length) * 100;
+
+  const isBusy = submitOnboarding.isPending;
+
+  const catalog = skillsCatalogQuery.data ?? [];
+
+  const draftMatches = React.useMemo(() => {
+    const q = draftSkillSearch.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter((s) => s.name.toLowerCase().includes(q));
+  }, [catalog, draftSkillSearch]);
+
+  const submitStep = React.useCallback(async () => {
+    if (step === "Experience") {
+      const mapped =
+        experienceLevel === "junior"
+          ? "Junior"
+          : experienceLevel === "senior"
+            ? "Senior"
+            : "Mid";
+      await submitOnboarding.mutateAsync({ experience_level: mapped });
+      return;
+    }
+
+    if (step === "Roles") {
+      if (preferredRoles.size === 0) return;
+      await submitOnboarding.mutateAsync({
+        preferred_roles: Array.from(preferredRoles),
+      });
+      return;
+    }
+
+    if (skills.length === 0) return;
+
+    await submitOnboarding.mutateAsync({
+      skills: skills.map((s) => ({
+        skill_id: s.skill_id,
+        proficiency_level: s.proficiency_level,
+        years_experience: s.years_experience,
+      })),
+    });
+  }, [
+    createSkillCatalog,
+    experienceLevel,
+    preferredRoles,
+    skillsCatalogQuery,
+    skills,
+    step,
+    submitOnboarding,
+  ]);
+
+  const addCustomRole = React.useCallback(() => {
+    const nextRole = customRole.trim();
+    if (!nextRole) return;
+
+    setPreferredRoles((prev) => {
+      if (prev.size >= 3) return prev;
+
+      const exists = Array.from(prev).some(
+        (r) => r.toLowerCase() === nextRole.toLowerCase(),
+      );
+      if (exists) return prev;
+
+      const next = new Set(prev);
+      next.add(nextRole);
+      return next;
+    });
+
+    setCustomRole("");
+  }, [customRole]);
+
+  const onNext = React.useCallback(async () => {
+    if (isBusy) return;
+    try {
+      await submitStep();
+      setIndex((v) => Math.min(steps.length - 1, v + 1));
+    } catch {
+      // keep user on current step
+    }
+  }, [isBusy, submitStep]);
+
+  const onFinish = React.useCallback(async () => {
+    if (isBusy) return;
+    try {
+      await submitStep();
+    } catch {
+      return;
+    }
+    router.push("/jobs");
+  }, [isBusy, router, submitStep]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,7 +259,17 @@ export default function OnboardingPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="px-0">
-                    <RadioGroup defaultValue="mid" className="grid gap-3">
+                    <RadioGroup
+                      value={experienceLevel}
+                      onValueChange={(v) =>
+                        setExperienceLevel(
+                          v === "junior" || v === "mid" || v === "senior"
+                            ? v
+                            : "mid",
+                        )
+                      }
+                      className="grid gap-3"
+                    >
                       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border bg-background p-4">
                         <RadioGroupItem value="junior" className="mt-1" />
                         <div>
@@ -170,7 +326,21 @@ export default function OnboardingPage() {
                       <input
                         type="checkbox"
                         className="mt-1 size-4 accent-[hsl(var(--primary))]"
-                        defaultChecked
+                        checked={preferredRoles.has("Frontend Engineer")}
+                        disabled={
+                          !preferredRoles.has("Frontend Engineer") &&
+                          preferredRoles.size >= 3
+                        }
+                        onChange={(e) => {
+                          setPreferredRoles((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) {
+                              if (next.size >= 3) return prev;
+                              next.add("Frontend Engineer");
+                            } else next.delete("Frontend Engineer");
+                            return next;
+                          });
+                        }}
                       />
                     </label>
                     <label className="flex items-start justify-between gap-4 rounded-2xl border bg-background p-4">
@@ -185,6 +355,21 @@ export default function OnboardingPage() {
                       <input
                         type="checkbox"
                         className="mt-1 size-4 accent-[hsl(var(--primary))]"
+                        checked={preferredRoles.has("Fullstack Engineer")}
+                        disabled={
+                          !preferredRoles.has("Fullstack Engineer") &&
+                          preferredRoles.size >= 3
+                        }
+                        onChange={(e) => {
+                          setPreferredRoles((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) {
+                              if (next.size >= 3) return prev;
+                              next.add("Fullstack Engineer");
+                            } else next.delete("Fullstack Engineer");
+                            return next;
+                          });
+                        }}
                       />
                     </label>
                     <label className="flex items-start justify-between gap-4 rounded-2xl border bg-background p-4">
@@ -199,8 +384,85 @@ export default function OnboardingPage() {
                       <input
                         type="checkbox"
                         className="mt-1 size-4 accent-[hsl(var(--primary))]"
+                        checked={preferredRoles.has("Product Designer")}
+                        disabled={
+                          !preferredRoles.has("Product Designer") &&
+                          preferredRoles.size >= 3
+                        }
+                        onChange={(e) => {
+                          setPreferredRoles((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) {
+                              if (next.size >= 3) return prev;
+                              next.add("Product Designer");
+                            } else next.delete("Product Designer");
+                            return next;
+                          });
+                        }}
                       />
                     </label>
+
+                    <div className="mt-2 grid gap-2 rounded-2xl border bg-background p-4">
+                      <Label htmlFor="custom-role">Add a role</Label>
+                      <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
+                        <Input
+                          id="custom-role"
+                          placeholder="e.g. Backend Engineer"
+                          value={customRole}
+                          onChange={(e) => setCustomRole(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomRole();
+                            }
+                          }}
+                          disabled={isBusy || preferredRoles.size >= 3}
+                        />
+                        <Button
+                          type="button"
+                          onClick={addCustomRole}
+                          disabled={
+                            isBusy ||
+                            preferredRoles.size >= 3 ||
+                            !customRole.trim()
+                          }
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Choose up to 3 roles.
+                      </div>
+                    </div>
+
+                    {preferredRoles.size > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {Array.from(preferredRoles).map((role) => (
+                          <Badge
+                            key={role}
+                            variant="secondary"
+                            className="rounded-full"
+                          >
+                            {role}
+                            <button
+                              type="button"
+                              className="ml-2 inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                              onClick={() =>
+                                setPreferredRoles((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(role);
+                                  return next;
+                                })
+                              }
+                              disabled={isBusy}
+                              aria-label={`Remove ${role}`}
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               ) : null}
@@ -217,26 +479,288 @@ export default function OnboardingPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4 px-0">
-                    <div className="grid gap-2">
-                      <Label htmlFor="skills">Skills</Label>
-                      <Input
-                        id="skills"
-                        placeholder="e.g. React, TypeScript, UI Design, SQL"
-                      />
+                    <div className="grid gap-3 rounded-2xl border bg-background p-4">
+                      <div className="grid gap-2">
+                        <Label>Skill</Label>
+                        <Popover
+                          open={draftSkillOpen}
+                          onOpenChange={setDraftSkillOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={draftSkillOpen}
+                              className="w-full justify-between"
+                              disabled={isBusy || skillsCatalogQuery.isLoading}
+                            >
+                              <span className="truncate">
+                                {draftSkillId
+                                  ? catalog.find((s) => s.id === draftSkillId)
+                                      ?.name || draftSkillName
+                                  : "Select a skill"}
+                              </span>
+                              <ChevronsUpDown className="size-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-(--radix-popover-trigger-width) p-0"
+                            align="start"
+                          >
+                            <Command>
+                              <CommandInput
+                                placeholder="Search skill…"
+                                value={draftSkillSearch}
+                                onValueChange={setDraftSkillSearch}
+                              />
+                              <CommandList>
+                                <CommandEmpty>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="h-auto w-full justify-start px-2 py-2"
+                                    disabled={
+                                      createSkillCatalog.isPending ||
+                                      !draftSkillSearch.trim()
+                                    }
+                                    onClick={async () => {
+                                      const term = draftSkillSearch.trim();
+                                      if (!term) return;
+                                      try {
+                                        const res =
+                                          await createSkillCatalog.mutateAsync({
+                                            name: term,
+                                          });
+                                        const created = res?.data;
+                                        if (!created?.id) return;
+                                        setDraftSkillId(created.id);
+                                        setDraftSkillName(created.name);
+                                        setDraftSkillSearch("");
+                                        setDraftSkillOpen(false);
+                                      } catch {
+                                        // ignore
+                                      }
+                                    }}
+                                  >
+                                    {createSkillCatalog.isPending ? (
+                                      <Spinner className="size-4" />
+                                    ) : (
+                                      <Plus className="size-4" />
+                                    )}
+                                    Add "{draftSkillSearch.trim()}"
+                                  </Button>
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {draftMatches.map((s) => (
+                                    <CommandItem
+                                      key={s.id}
+                                      value={s.name}
+                                      onSelect={() => {
+                                        setDraftSkillId(s.id);
+                                        setDraftSkillName(s.name);
+                                        setDraftSkillOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={
+                                          draftSkillId === s.id
+                                            ? "size-4 opacity-100"
+                                            : "size-4 opacity-0"
+                                        }
+                                      />
+                                      {s.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label>Proficiency</Label>
+                        <div className="flex items-center gap-3">
+                          <Slider
+                            value={[draftProficiency]}
+                            min={1}
+                            max={5}
+                            step={1}
+                            onValueChange={(v) =>
+                              setDraftProficiency(
+                                typeof v[0] === "number" ? v[0] : 3,
+                              )
+                            }
+                            disabled={isBusy}
+                          />
+                          <div className="w-12 text-right text-sm tabular-nums text-muted-foreground">
+                            {draftProficiency}/5
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="years-exp">Years experience</Label>
+                        <Input
+                          id="years-exp"
+                          inputMode="numeric"
+                          value={String(draftYears)}
+                          onChange={(e) => {
+                            const n = Number(e.target.value);
+                            setDraftYears(
+                              Number.isFinite(n)
+                                ? Math.max(0, Math.min(50, Math.round(n)))
+                                : 0,
+                            );
+                          }}
+                          disabled={isBusy}
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (!draftSkillId) return;
+                          const name =
+                            catalog.find((s) => s.id === draftSkillId)?.name ||
+                            draftSkillName;
+                          if (!name) return;
+
+                          setSkills((prev) => {
+                            const next = prev.filter(
+                              (s) => s.skill_id !== draftSkillId,
+                            );
+                            return [
+                              {
+                                skill_id: draftSkillId,
+                                name,
+                                proficiency_level: Math.min(
+                                  5,
+                                  Math.max(1, Math.round(draftProficiency)),
+                                ),
+                                years_experience: Math.min(
+                                  50,
+                                  Math.max(0, Math.round(draftYears)),
+                                ),
+                              },
+                              ...next,
+                            ];
+                          });
+
+                          setDraftSkillId("");
+                          setDraftSkillName("");
+                          setDraftSkillSearch("");
+                          setDraftSkillOpen(false);
+                          setDraftProficiency(3);
+                          setDraftYears(1);
+                        }}
+                        disabled={isBusy || !draftSkillId}
+                      >
+                        Add skill
+                      </Button>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="confidence">
-                        What do you feel strongest at?
-                      </Label>
-                      <Input
-                        id="confidence"
-                        placeholder="e.g. component architecture"
-                      />
-                    </div>
-                    <div className="rounded-2xl border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                      Tip: list 6–10 skills max. More isn’t better—signal
-                      quality matters.
-                    </div>
+
+                    {skills.length > 0 ? (
+                      <div className="grid gap-3">
+                        {skills.map((s) => (
+                          <div
+                            key={s.skill_id}
+                            className="rounded-2xl border bg-background p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {s.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Tune proficiency and experience
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  setSkills((prev) =>
+                                    prev.filter(
+                                      (x) => x.skill_id !== s.skill_id,
+                                    ),
+                                  )
+                                }
+                                disabled={isBusy}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+
+                            <div className="mt-4 grid gap-4 md:grid-cols-2">
+                              <div className="grid gap-2">
+                                <Label>Proficiency</Label>
+                                <div className="flex items-center gap-3">
+                                  <Slider
+                                    value={[s.proficiency_level]}
+                                    min={1}
+                                    max={5}
+                                    step={1}
+                                    onValueChange={(v) => {
+                                      const next =
+                                        typeof v[0] === "number"
+                                          ? v[0]
+                                          : s.proficiency_level;
+                                      setSkills((prev) =>
+                                        prev.map((x) =>
+                                          x.skill_id === s.skill_id
+                                            ? {
+                                                ...x,
+                                                proficiency_level: Math.min(
+                                                  5,
+                                                  Math.max(1, Math.round(next)),
+                                                ),
+                                              }
+                                            : x,
+                                        ),
+                                      );
+                                    }}
+                                    disabled={isBusy}
+                                  />
+                                  <div className="w-12 text-right text-sm tabular-nums text-muted-foreground">
+                                    {s.proficiency_level}/5
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid gap-2">
+                                <Label>Years</Label>
+                                <Input
+                                  inputMode="numeric"
+                                  value={String(s.years_experience)}
+                                  onChange={(e) => {
+                                    const n = Number(e.target.value);
+                                    const next = Number.isFinite(n)
+                                      ? Math.max(0, Math.min(50, Math.round(n)))
+                                      : 0;
+                                    setSkills((prev) =>
+                                      prev.map((x) =>
+                                        x.skill_id === s.skill_id
+                                          ? { ...x, years_experience: next }
+                                          : x,
+                                      ),
+                                    );
+                                  }}
+                                  disabled={isBusy}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed bg-background p-4 text-sm text-muted-foreground">
+                        Tip: add 3–6 skills. Keep it focused—signal quality
+                        matters.
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ) : null}
@@ -264,20 +788,14 @@ export default function OnboardingPage() {
                     Back
                   </Button>
                   {index < steps.length - 1 ? (
-                    <Button
-                      onClick={() =>
-                        setIndex((v) => Math.min(steps.length - 1, v + 1))
-                      }
-                    >
+                    <Button onClick={onNext} disabled={isBusy}>
                       Next
                       <ChevronRight className="size-4" />
                     </Button>
                   ) : (
-                    <Button asChild>
-                      <Link href="/dashboard">
-                        Finish Setup
-                        <ArrowRight className="size-4" />
-                      </Link>
+                    <Button onClick={onFinish} disabled={isBusy}>
+                      Finish Setup
+                      <ArrowRight className="size-4" />
                     </Button>
                   )}
                 </div>
@@ -303,7 +821,7 @@ export default function OnboardingPage() {
               </Link>
             </Button>
             <Button variant="ghost" asChild>
-              <Link href="/dashboard">Skip for now</Link>
+              <Link href="/jobs">Skip for now</Link>
             </Button>
           </div>
         </div>
