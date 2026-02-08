@@ -18,10 +18,8 @@ export default function ProtectedNavbar() {
 
   const activeGroup = React.useMemo(() => {
     if (pathname.startsWith("/jobs")) return "jobs";
-    if (pathname.startsWith("/users")) return "profile";
-    if (pathname.startsWith("/dashboard")) return "insights";
-    if (pathname.startsWith("/skills-gap")) return "insights";
-    if (pathname.startsWith("/pipeline")) return "system";
+    if (pathname.startsWith("/dashboard")) return "dashboard";
+    if (pathname.startsWith("/users/skills")) return "skills";
     return null;
   }, [pathname]);
 
@@ -48,7 +46,7 @@ export default function ProtectedNavbar() {
           </button>
 
           <Link
-            href="/jobs"
+            href="/dashboard"
             className="text-base font-semibold tracking-tight text-foreground"
             onClick={closeAll}
           >
@@ -59,6 +57,26 @@ export default function ProtectedNavbar() {
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
+          <Link
+            href="/dashboard"
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground",
+              activeGroup === "dashboard" && "bg-accent text-foreground",
+            )}
+            onClick={closeAll}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/users/skills"
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground",
+              activeGroup === "skills" && "bg-accent text-foreground",
+            )}
+            onClick={closeAll}
+          >
+            My Skills
+          </Link>
           <NavbarMenu
             label="Jobs"
             active={activeGroup === "jobs"}
@@ -67,30 +85,6 @@ export default function ProtectedNavbar() {
               { label: "Browse Jobs", href: "/jobs" },
               { label: "Recommendations", href: "/jobs/recommendations" },
             ]}
-          />
-          <NavbarMenu
-            label="Insights"
-            active={activeGroup === "insights"}
-            closeSignal={closeSignal}
-            items={[
-              { label: "Dashboard", href: "/dashboard" },
-              { label: "Skills Gap", href: "/skills-gap" },
-            ]}
-          />
-          <NavbarMenu
-            label="Profile"
-            active={activeGroup === "profile"}
-            closeSignal={closeSignal}
-            items={[
-              { label: "My Profile", href: "/users/me" },
-              { label: "My Skills", href: "/users/skills" },
-            ]}
-          />
-          <NavbarMenu
-            label="System"
-            active={activeGroup === "system"}
-            closeSignal={closeSignal}
-            items={[{ label: "Pipeline Status", href: "/pipeline/status" }]}
           />
         </nav>
 
@@ -110,6 +104,28 @@ export default function ProtectedNavbar() {
       >
         <div className="mx-auto w-full max-w-6xl px-4 py-3">
           <div className="grid gap-2">
+            <Link
+              href="/dashboard"
+              className={cn(
+                "rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary",
+                activeGroup === "dashboard" && "bg-primary/10 text-primary",
+              )}
+              onClick={closeAll}
+            >
+              Dashboard
+            </Link>
+
+            <Link
+              href="/users/skills"
+              className={cn(
+                "rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary",
+                activeGroup === "skills" && "bg-primary/10 text-primary",
+              )}
+              onClick={closeAll}
+            >
+              My Skills
+            </Link>
+
             <div className="grid gap-1">
               <div className="px-2 text-xs font-medium tracking-wide text-muted-foreground">
                 Jobs
@@ -127,59 +143,6 @@ export default function ProtectedNavbar() {
                 onClick={closeAll}
               >
                 Recommendations
-              </Link>
-            </div>
-
-            <div className="grid gap-1">
-              <div className="px-2 text-xs font-medium tracking-wide text-muted-foreground">
-                Insights
-              </div>
-              <Link
-                href="/dashboard"
-                className="rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary"
-                onClick={closeAll}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/skills-gap"
-                className="rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary"
-                onClick={closeAll}
-              >
-                Skills Gap
-              </Link>
-            </div>
-
-            <div className="grid gap-1">
-              <div className="px-2 text-xs font-medium tracking-wide text-muted-foreground">
-                Profile
-              </div>
-              <Link
-                href="/users/me"
-                className="rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary"
-                onClick={closeAll}
-              >
-                My Profile
-              </Link>
-              <Link
-                href="/users/skills"
-                className="rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary"
-                onClick={closeAll}
-              >
-                My Skills
-              </Link>
-            </div>
-
-            <div className="grid gap-1">
-              <div className="px-2 text-xs font-medium tracking-wide text-muted-foreground">
-                System
-              </div>
-              <Link
-                href="/pipeline/status"
-                className="rounded-lg px-2 py-2 text-sm hover:bg-primary/10 hover:text-primary"
-                onClick={closeAll}
-              >
-                Pipeline Status
               </Link>
             </div>
           </div>

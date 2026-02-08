@@ -8,10 +8,6 @@ import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-function deleteCookie(name: string) {
-  document.cookie = `${name}=; Path=/; Max-Age=0`;
-}
-
 export default function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
@@ -23,12 +19,13 @@ export default function LogoutButton({ className }: { className?: string }) {
       size="sm"
       className={className}
       disabled={loading}
-      onClick={() => {
+      onClick={async () => {
         if (loading) return;
         setLoading(true);
         try {
-          deleteCookie("access_token");
-          deleteCookie("refresh_token");
+          await fetch("/api/auth/logout", {
+            method: "POST",
+          });
         } finally {
           router.replace("/login");
         }
