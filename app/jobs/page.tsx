@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import JobsSectionNav from "@/components/jobs/JobsSectionNav";
 import JobsClient from "@/components/jobs/JobsClient";
 
 export default function JobsListingPage() {
@@ -18,9 +19,20 @@ export default function JobsListingPage() {
                 Browse with clarity
               </h1>
             </div>
-            <Button variant="ghost" asChild>
-              <Link href="/dashboard">Back to dashboard</Link>
-            </Button>
+            <div className="flex flex-col items-end gap-3">
+              <JobsSectionNav
+                items={[
+                  { label: "Browse", href: "/jobs" },
+                  {
+                    label: "Recommendations",
+                    href: "/jobs/recommendations",
+                  },
+                ]}
+              />
+              <Button variant="ghost" asChild>
+                <Link href="/dashboard">Back to dashboard</Link>
+              </Button>
+            </div>
           </div>
 
           <JobsClient />
