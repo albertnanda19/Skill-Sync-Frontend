@@ -34,6 +34,31 @@ export type JobsApiResponse = {
   data: unknown;
 };
 
+export function jobsQueryKey({
+  filters,
+  limit,
+  offset,
+}: {
+  filters: JobsFilters;
+  limit: number;
+  offset: number;
+}) {
+  const safeLimit = clampLimit(limit);
+  const safeOffset = clampOffset(offset);
+
+  return [
+    "jobs",
+    {
+      title: filters.title,
+      company_name: filters.company_name,
+      location: filters.location,
+      skills: filters.skills,
+      limit: safeLimit,
+      offset: safeOffset,
+    },
+  ] as const;
+}
+
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -153,17 +178,7 @@ export function useJobs({
   const safeOffset = clampOffset(offset);
 
   return useQuery<JobsListResult, unknown>({
-    queryKey: [
-      "jobs",
-      {
-        title: filters.title,
-        company_name: filters.company_name,
-        location: filters.location,
-        skills: filters.skills,
-        limit: safeLimit,
-        offset: safeOffset,
-      },
-    ],
+    queryKey: jobsQueryKey({ filters, limit: safeLimit, offset: safeOffset }),
     queryFn: async () => {
       const params: Record<string, string | number> = {
         limit: safeLimit,
@@ -178,6 +193,7 @@ export function useJobs({
       const { data } = await appApi.get<JobsApiResponse>("/api/jobs", { params });
       return normalizeJobsResponse(data);
     },
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
 }

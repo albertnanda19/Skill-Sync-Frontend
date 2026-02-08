@@ -3,14 +3,18 @@
 import * as React from "react";
 import { Search } from "lucide-react";
 
-import { useJobs, type JobsFilters } from "@/hooks/useJobs";
+import { jobsQueryKey, useJobs, type JobsFilters } from "@/hooks/useJobs";
 import { useJobsWebSocket } from "@/hooks/useJobsWebSocket";
+import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import SearchStatusIndicator, {
+  type SearchStatus,
+} from "@/components/jobs/SearchStatusIndicator";
 
 function ScoreBadge({ score }: { score: number }) {
   const className =
@@ -158,12 +162,17 @@ export default function JobsClient({
   initialLimit?: number;
   initialOffset?: number;
 }) {
+  const queryClient = useQueryClient();
+
   const [filters, setFilters] = React.useState<JobsFilters>(
     () => initialFilters ?? {},
   );
   const [hasApplied, setHasApplied] = React.useState(false);
   const [applyCount, setApplyCount] = React.useState(0);
   const [appliedKeyword, setAppliedKeyword] = React.useState("");
+  const [searchStatus, setSearchStatus] = React.useState<SearchStatus>("idle");
+  const [newJobsCount, setNewJobsCount] = React.useState<number>(0);
+  const [lastUpdatedAt, setLastUpdatedAt] = React.useState<Date | null>(null);
   const [draft, setDraft] = React.useState<{
     title: string;
     company_name: string;
@@ -188,6 +197,7 @@ export default function JobsClient({
     status: wsStatus,
     isRefreshing,
     hasError: wsHasError,
+    lastEvent,
   } = useJobsWebSocket(wsKeyword, applyCount);
 
   const wsIsLive =
@@ -202,6 +212,29 @@ export default function JobsClient({
     limit,
     offset,
   });
+
+  React.useEffect(() => {
+    if (searchStatus !== "updated") return;
+    const t = window.setTimeout(() => {
+      setSearchStatus("idle");
+    }, 5000);
+    return () => window.clearTimeout(t);
+  }, [searchStatus]);
+
+  React.useEffect(() => {
+    if (!lastEvent) return;
+    if (lastEvent.type !== "jobs_updated") return;
+    if (!wsKeyword) return;
+    if (lastEvent.keyword.trim() !== wsKeyword.trim()) return;
+
+    setNewJobsCount(lastEvent.new_jobs || 0);
+    setSearchStatus("updated");
+    setLastUpdatedAt(new Date());
+
+    queryClient.invalidateQueries({
+      queryKey: jobsQueryKey({ filters, limit, offset }),
+    });
+  }, [filters, lastEvent, limit, offset, queryClient, wsKeyword]);
 
   const items = data?.items ?? [];
 
@@ -219,6 +252,8 @@ export default function JobsClient({
       : items.length === limit;
 
   function applyFilters(next: typeof draft) {
+    setSearchStatus("searching");
+    setNewJobsCount(0);
     setHasApplied(true);
     setApplyCount((c) => c + 1);
     setAppliedKeyword(next.title.trim());
@@ -318,6 +353,9 @@ export default function JobsClient({
                   setDraft(cleared);
                   setHasApplied(false);
                   setAppliedKeyword("");
+                  setSearchStatus("idle");
+                  setNewJobsCount(0);
+                  setLastUpdatedAt(null);
                   setFilters({});
                   setOffset(0);
                 }}
@@ -328,6 +366,8 @@ export default function JobsClient({
                 type="button"
                 variant="secondary"
                 onClick={() => {
+                  setSearchStatus("searching");
+                  setNewJobsCount(0);
                   refetch();
                 }}
               >
@@ -397,6 +437,12 @@ export default function JobsClient({
           </div>
         </form>
       </div>
+
+      <SearchStatusIndicator
+        status={searchStatus}
+        newJobsCount={newJobsCount}
+        lastUpdatedAt={lastUpdatedAt}
+      />
 
       {isError ? (
         <Alert variant="destructive">

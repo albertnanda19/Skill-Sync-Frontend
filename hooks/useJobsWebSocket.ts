@@ -11,6 +11,35 @@ export type JobsWebSocketStatus =
   | "connected"
   | "reconnecting";
 
+export type JobsUpdatedEvent = {
+  type: "jobs_updated";
+  keyword: string;
+  new_jobs: number;
+};
+
+function normalizeJobsUpdatedEvent(payload: unknown): JobsUpdatedEvent | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const p = payload as Record<string, unknown>;
+  const type = typeof p.type === "string" ? p.type : "";
+  if (type !== "jobs_updated") return null;
+
+  const keyword = typeof p.keyword === "string" ? p.keyword : "";
+  const newJobsRaw = p.new_jobs;
+  const newJobs =
+    typeof newJobsRaw === "number"
+      ? newJobsRaw
+      : Number.isFinite(Number(newJobsRaw))
+        ? Number(newJobsRaw)
+        : 0;
+
+  return {
+    type: "jobs_updated",
+    keyword,
+    new_jobs: Math.max(0, Math.trunc(newJobs)),
+  };
+}
+
 export function useJobsWebSocket(keyword: string, connectKey = 0) {
   const queryClient = useQueryClient();
 
@@ -19,6 +48,9 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
   );
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
+  const [lastEvent, setLastEvent] = React.useState<JobsUpdatedEvent | null>(
+    null,
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -102,7 +134,9 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
       });
     };
 
-    const onMessage = (_payload: unknown) => {
+    const onMessage = (payload: unknown) => {
+      const evt = normalizeJobsUpdatedEvent(payload);
+      if (evt) setLastEvent(evt);
       onUpdate();
     };
 
@@ -142,5 +176,5 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
     return unsubscribe;
   }, [isRefreshing, queryClient]);
 
-  return { status, isRefreshing, hasError };
+  return { status, isRefreshing, hasError, lastEvent };
 }
