@@ -13,6 +13,7 @@ export type JobsFilters = {
 
 export type JobItem = {
   id: string;
+  created_at?: string;
   title: string;
   company_name: string;
   location: string;
@@ -84,6 +85,7 @@ function normalizeJob(raw: unknown): JobItem | null {
   const r = raw as Record<string, unknown>;
 
   const id = normalizeText(r.job_id ?? r.id ?? r._id);
+  const createdAt = normalizeText(r.created_at ?? r.createdAt);
   const title = normalizeText(r.title ?? r.job_title);
   const companyName = normalizeText(r.company_name ?? r.company ?? r.companyName);
   const location = normalizeText(r.location);
@@ -100,6 +102,7 @@ function normalizeJob(raw: unknown): JobItem | null {
 
   return {
     id,
+    ...(createdAt ? { created_at: createdAt } : {}),
     title,
     company_name: companyName,
     location,
@@ -148,6 +151,35 @@ function normalizeJobsResponse(payload: unknown): JobsListResult {
   return { items: [] };
 }
 
+export async function fetchJobsList({
+  filters,
+  limit,
+  offset,
+  created_after,
+}: {
+  filters: JobsFilters;
+  limit: number;
+  offset: number;
+  created_after?: string | null;
+}): Promise<JobsListResult> {
+  const safeLimit = clampLimit(limit);
+  const safeOffset = clampOffset(offset);
+
+  const params: Record<string, string | number> = {
+    limit: safeLimit,
+    offset: safeOffset,
+  };
+
+  if (filters.title) params.title = filters.title;
+  if (filters.company_name) params.company_name = filters.company_name;
+  if (filters.location) params.location = filters.location;
+  if (filters.skills) params.skills = filters.skills;
+  if (created_after) params.created_after = created_after;
+
+  const { data } = await appApi.get<JobsApiResponse>("/api/jobs", { params });
+  return normalizeJobsResponse(data);
+}
+
 function clampLimit(limit: number | undefined) {
   const raw = typeof limit === "number" ? limit : 20;
   if (!Number.isFinite(raw)) return 20;
@@ -179,20 +211,7 @@ export function useJobs({
 
   return useQuery<JobsListResult, unknown>({
     queryKey: jobsQueryKey({ filters, limit: safeLimit, offset: safeOffset }),
-    queryFn: async () => {
-      const params: Record<string, string | number> = {
-        limit: safeLimit,
-        offset: safeOffset,
-      };
-
-      if (filters.title) params.title = filters.title;
-      if (filters.company_name) params.company_name = filters.company_name;
-      if (filters.location) params.location = filters.location;
-      if (filters.skills) params.skills = filters.skills;
-
-      const { data } = await appApi.get<JobsApiResponse>("/api/jobs", { params });
-      return normalizeJobsResponse(data);
-    },
+    queryFn: () => fetchJobsList({ filters, limit: safeLimit, offset: safeOffset }),
     staleTime: 0,
     refetchOnWindowFocus: false,
   });

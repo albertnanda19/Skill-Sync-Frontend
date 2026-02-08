@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { wsManager } from "@/lib/websocket/wsManager";
 
@@ -41,8 +40,6 @@ function normalizeJobsUpdatedEvent(payload: unknown): JobsUpdatedEvent | null {
 }
 
 export function useJobsWebSocket(keyword: string, connectKey = 0) {
-  const queryClient = useQueryClient();
-
   const [status, setStatus] = React.useState<JobsWebSocketStatus>(
     "disconnected",
   );
@@ -127,17 +124,10 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
       return;
     }
 
-    const onUpdate = () => {
-      setIsRefreshing(true);
-      queryClient.invalidateQueries({
-        queryKey: ["jobs"],
-      });
-    };
-
     const onMessage = (payload: unknown) => {
       const evt = normalizeJobsUpdatedEvent(payload);
       if (evt) setLastEvent(evt);
-      onUpdate();
+      setIsRefreshing(true);
     };
 
     try {
@@ -156,25 +146,14 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
         console.error("[useJobsWebSocket] Failed to unsubscribe", error);
       }
     };
-  }, [keyword, connectKey, queryClient]);
+  }, [keyword, connectKey]);
 
   React.useEffect(() => {
     if (!isRefreshing) return;
 
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      const query = event?.query;
-      if (!query) return;
-
-      const queryKey = query.queryKey;
-      if (!Array.isArray(queryKey) || queryKey[0] !== "jobs") return;
-
-      if (query.state.status === "success") {
-        setIsRefreshing(false);
-      }
-    });
-
-    return unsubscribe;
-  }, [isRefreshing, queryClient]);
+    const t = window.setTimeout(() => setIsRefreshing(false), 800);
+    return () => window.clearTimeout(t);
+  }, [isRefreshing]);
 
   return { status, isRefreshing, hasError, lastEvent };
 }

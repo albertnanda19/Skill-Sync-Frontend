@@ -15,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import SearchStatusIndicator, {
   type SearchStatus,
 } from "@/components/jobs/SearchStatusIndicator";
+import NewJobsBanner from "@/components/jobs/NewJobsBanner";
 
 function ScoreBadge({ score }: { score: number }) {
   const className =
@@ -173,6 +174,10 @@ export default function JobsClient({
   const [searchStatus, setSearchStatus] = React.useState<SearchStatus>("idle");
   const [newJobsCount, setNewJobsCount] = React.useState<number>(0);
   const [lastUpdatedAt, setLastUpdatedAt] = React.useState<Date | null>(null);
+  const [latestCreatedAt, setLatestCreatedAt] = React.useState<string | null>(
+    null,
+  );
+  const [bannerCount, setBannerCount] = React.useState(0);
   const [draft, setDraft] = React.useState<{
     title: string;
     company_name: string;
@@ -213,6 +218,27 @@ export default function JobsClient({
     offset,
   });
 
+  const currentJobsQueryKey = React.useMemo(
+    () => jobsQueryKey({ filters, limit, offset }),
+    [filters, limit, offset],
+  );
+
+  const items = data?.items ?? [];
+
+  React.useEffect(() => {
+    const first = data?.items?.[0];
+    const createdAt = first?.created_at;
+    if (typeof createdAt === "string" && createdAt.trim()) {
+      setLatestCreatedAt(createdAt);
+    }
+  }, [data?.items]);
+
+  React.useEffect(() => {
+    if (!bannerCount) return;
+    const t = window.setTimeout(() => setBannerCount(0), 4000);
+    return () => window.clearTimeout(t);
+  }, [bannerCount]);
+
   React.useEffect(() => {
     if (searchStatus !== "updated") return;
     const t = window.setTimeout(() => {
@@ -222,21 +248,114 @@ export default function JobsClient({
   }, [searchStatus]);
 
   React.useEffect(() => {
-    if (!lastEvent) return;
-    if (lastEvent.type !== "jobs_updated") return;
-    if (!wsKeyword) return;
-    if (lastEvent.keyword.trim() !== wsKeyword.trim()) return;
+    let cancelled = false;
 
-    setNewJobsCount(lastEvent.new_jobs || 0);
-    setSearchStatus("updated");
-    setLastUpdatedAt(new Date());
+    async function run() {
+      if (!lastEvent) return;
+      if (lastEvent.type !== "jobs_updated") return;
+      if (!wsKeyword) return;
+      if (lastEvent.keyword.trim() !== wsKeyword.trim()) return;
 
-    queryClient.invalidateQueries({
-      queryKey: jobsQueryKey({ filters, limit, offset }),
-    });
-  }, [filters, lastEvent, limit, offset, queryClient, wsKeyword]);
+      setNewJobsCount(lastEvent.new_jobs || 0);
+      setSearchStatus("updated");
+      setLastUpdatedAt(new Date());
 
-  const items = data?.items ?? [];
+      if (!latestCreatedAt) {
+        queryClient.invalidateQueries({ queryKey: currentJobsQueryKey });
+        return;
+      }
+
+      try {
+        const { fetchJobsList } = await import("@/hooks/useJobs");
+        const res = await fetchJobsList({
+          filters,
+          limit: 20,
+          offset: 0,
+          created_after: latestCreatedAt,
+        });
+
+        if (cancelled) return;
+
+        const incoming = res.items ?? [];
+        if (incoming.length === 0) return;
+
+        const filteredIncoming = incoming.filter(
+          (j) => typeof j.id === "string" && j.id.trim().length > 0,
+        );
+
+        if (filteredIncoming.length === 0) return;
+
+        queryClient.setQueryData(currentJobsQueryKey, (old) => {
+          if (!old || typeof old !== "object") return old;
+          const oldData = old as { items?: unknown; total?: unknown };
+          const oldItems = Array.isArray(oldData.items)
+            ? (oldData.items as any[])
+            : [];
+
+          const existingIds = new Set(
+            oldItems
+              .map((j) => (j && typeof j === "object" ? (j as any).id : null))
+              .filter(
+                (id): id is string =>
+                  typeof id === "string" && id.trim().length > 0,
+              ),
+          );
+
+          const dedupedNew = filteredIncoming.filter(
+            (j) => !existingIds.has(j.id),
+          );
+          const nextItems = [...dedupedNew, ...oldItems].slice(0, 100);
+          const oldTotal =
+            typeof oldData.total === "number"
+              ? oldData.total
+              : Number.isFinite(Number(oldData.total))
+                ? Number(oldData.total)
+                : undefined;
+
+          return {
+            ...(old as any),
+            items: nextItems,
+            ...(typeof oldTotal === "number"
+              ? { total: oldTotal + dedupedNew.length }
+              : {}),
+          };
+        });
+
+        const newestCreatedAt = filteredIncoming[0]?.created_at;
+        if (typeof newestCreatedAt === "string" && newestCreatedAt.trim()) {
+          setLatestCreatedAt(newestCreatedAt);
+        }
+
+        const existingIds = new Set(items.map((j) => j.id));
+        const dedupedCount = filteredIncoming.filter(
+          (j) => !existingIds.has(j.id),
+        ).length;
+        if (dedupedCount > 0) {
+          setBannerCount(dedupedCount);
+        }
+      } catch {
+        return;
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentJobsQueryKey,
+    filters,
+    items,
+    lastEvent,
+    latestCreatedAt,
+    queryClient,
+    wsKeyword,
+  ]);
+
+  React.useEffect(() => {
+    setLatestCreatedAt(null);
+    setBannerCount(0);
+  }, [wsKeyword, filters]);
 
   const currentPage = Math.floor(offset / limit) + 1;
   const total = data?.total;
@@ -254,6 +373,8 @@ export default function JobsClient({
   function applyFilters(next: typeof draft) {
     setSearchStatus("searching");
     setNewJobsCount(0);
+    setLatestCreatedAt(null);
+    setBannerCount(0);
     setHasApplied(true);
     setApplyCount((c) => c + 1);
     setAppliedKeyword(next.title.trim());
@@ -356,6 +477,8 @@ export default function JobsClient({
                   setSearchStatus("idle");
                   setNewJobsCount(0);
                   setLastUpdatedAt(null);
+                  setLatestCreatedAt(null);
+                  setBannerCount(0);
                   setFilters({});
                   setOffset(0);
                 }}
@@ -443,6 +566,8 @@ export default function JobsClient({
         newJobsCount={newJobsCount}
         lastUpdatedAt={lastUpdatedAt}
       />
+
+      <NewJobsBanner count={bannerCount} />
 
       {isError ? (
         <Alert variant="destructive">
