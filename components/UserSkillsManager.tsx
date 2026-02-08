@@ -189,30 +189,34 @@ export default function UserSkillsManager() {
 
   return (
     <div className="grid gap-10">
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div className="space-y-2">
-          <Badge variant="secondary" className="rounded-full">
-            User skills
-          </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Your skill profile
-          </h1>
-          <div className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Keep it focused: add only skills you want the system to optimize
-            for.
+      <div className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
+        <div className="pointer-events-none absolute -left-24 -bottom-24 size-72 rounded-full bg-secondary/50 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div className="space-y-2">
+            <Badge variant="secondary" className="rounded-full">
+              User skills
+            </Badge>
+            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              Your skill profile
+            </h1>
+            <div className="max-w-2xl text-sm leading-6 text-muted-foreground">
+              Keep it focused: add only skills you want the system to optimize
+              for.
+            </div>
           </div>
+          <Button variant="ghost" asChild>
+            <Link href="/dashboard">Back to dashboard</Link>
+          </Button>
         </div>
-        <Button variant="ghost" asChild>
-          <Link href="/dashboard">Back to dashboard</Link>
-        </Button>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="space-y-4">
-          <Card className="rounded-[28px] p-6 shadow-sm md:p-8">
+          <Card className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm md:p-8">
+            <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/10 blur-3xl" />
             <form
               onSubmit={submitCreate}
-              className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
+              className="relative grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
             >
               <div className="grid gap-2">
                 <Label>Skill</Label>
@@ -271,6 +275,7 @@ export default function UserSkillsManager() {
                                 toast.success("Skill created");
                                 setDraftSkillId(created.id);
                                 setDraftSkillName(created.name);
+                                setDraftSkillSearch("");
                                 setDraftSkillOpen(false);
                               } catch {
                                 toast.error("Failed to create skill");
@@ -356,7 +361,7 @@ export default function UserSkillsManager() {
           </Card>
 
           {skillsQuery.isLoading ? (
-            <Card className="rounded-[28px] p-6 shadow-sm">
+            <Card className="rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Spinner className="size-5" />
                 Loading skills…
@@ -383,7 +388,7 @@ export default function UserSkillsManager() {
               </AlertDescription>
             </Alert>
           ) : skills.length === 0 ? (
-            <Card className="rounded-[28px] p-6 shadow-sm">
+            <Card className="rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
               <div className="text-sm text-muted-foreground">
                 No skills yet. Add your first one above.
               </div>
@@ -395,231 +400,238 @@ export default function UserSkillsManager() {
                 const isOptimistic = s.id.startsWith("optimistic-");
 
                 return (
-                  <Card key={s.id} className="rounded-[28px] p-6 shadow-sm">
-                    {!isEditing ? (
-                      <div className="space-y-5">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="text-sm font-medium tracking-tight">
-                              {s.name}
+                  <Card
+                    key={s.id}
+                    className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm"
+                  >
+                    <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/10 blur-3xl" />
+                    <div className="relative">
+                      {!isEditing ? (
+                        <div className="space-y-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="text-sm font-medium tracking-tight">
+                                {s.name}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Proficiency:{" "}
+                                {clampProficiency(s.proficiencyLevel)}/5
+                                {typeof s.yearsExperience === "number"
+                                  ? ` · ${s.yearsExperience} yrs exp`
+                                  : ""}
+                              </div>
                             </div>
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              Proficiency:{" "}
-                              {clampProficiency(s.proficiencyLevel)}/5
-                              {typeof s.yearsExperience === "number"
-                                ? ` · ${s.yearsExperience} yrs exp`
-                                : ""}
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => startEdit(s)}
-                              disabled={isBusy}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setDeleteTarget({ id: s.id, name: s.name });
-                                setDeleteDialogOpen(true);
-                              }}
-                              disabled={isBusy || isOptimistic}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Slider
-                            value={[clampProficiency(s.proficiencyLevel)]}
-                            min={1}
-                            max={5}
-                            step={1}
-                            disabled
-                          />
-                          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>1</span>
-                            <span>5</span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <form onSubmit={submitUpdate} className="space-y-5">
-                        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                          <div className="grid gap-2">
-                            <Label>Skill</Label>
-                            <Popover
-                              open={editSkillOpen}
-                              onOpenChange={setEditSkillOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={editSkillOpen}
-                                  className="w-full justify-between"
-                                  disabled={isBusy || catalogQuery.isLoading}
-                                >
-                                  <span className="truncate">
-                                    {editSkillId
-                                      ? catalog.find(
-                                          (s2) => s2.id === editSkillId,
-                                        )?.name || editName
-                                      : "Select a skill"}
-                                  </span>
-                                  <ChevronsUpDown className="size-4 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-(--radix-popover-trigger-width) p-0"
-                                align="start"
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => startEdit(s)}
+                                disabled={isBusy}
                               >
-                                <Command>
-                                  <CommandInput
-                                    placeholder="Search skill…"
-                                    value={editSkillSearch}
-                                    onValueChange={setEditSkillSearch}
-                                  />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="h-auto w-full justify-start px-2 py-2"
-                                        disabled={
-                                          createCatalogSkill.isPending ||
-                                          !editSkillSearch.trim()
-                                        }
-                                        onClick={async () => {
-                                          const term = editSkillSearch.trim();
-                                          if (!term) return;
-                                          try {
-                                            const res =
-                                              await createCatalogSkill.mutateAsync(
-                                                { name: term },
-                                              );
-                                            const created = res?.data;
-                                            if (!created?.id) {
-                                              toast.error(
-                                                "Failed to create skill",
-                                              );
-                                              return;
-                                            }
-                                            toast.success("Skill created");
-                                            setEditSkillId(created.id);
-                                            setEditName(created.name);
-                                            setEditSkillOpen(false);
-                                          } catch {
-                                            toast.error(
-                                              "Failed to create skill",
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        {createCatalogSkill.isPending ? (
-                                          <Spinner className="size-4" />
-                                        ) : (
-                                          <Plus className="size-4" />
-                                        )}
-                                        Add "{editSkillSearch.trim()}"
-                                      </Button>
-                                    </CommandEmpty>
-                                    <CommandGroup>
-                                      {editMatches.map((opt) => (
-                                        <CommandItem
-                                          key={opt.id}
-                                          value={opt.name}
-                                          onSelect={() => {
-                                            setEditSkillId(opt.id);
-                                            setEditName(opt.name);
-                                            setEditSkillOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={
-                                              editSkillId === opt.id
-                                                ? "size-4 opacity-100"
-                                                : "size-4 opacity-0"
-                                            }
-                                          />
-                                          {opt.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setDeleteTarget({ id: s.id, name: s.name });
+                                  setDeleteDialogOpen(true);
+                                }}
+                                disabled={isBusy || isOptimistic}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
                           </div>
 
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={cancelEdit}
-                              disabled={isBusy}
-                            >
-                              <X className="size-4" />
-                              Cancel
-                            </Button>
-                            <Button type="submit" disabled={isBusy}>
-                              {updateSkill.isPending ? (
-                                <Spinner className="size-4" />
-                              ) : (
-                                <Save className="size-4" />
-                              )}
-                              Save
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label>Level</Label>
-                          <div className="flex items-center gap-3">
+                          <div>
                             <Slider
-                              value={[editProficiency]}
+                              value={[clampProficiency(s.proficiencyLevel)]}
                               min={1}
                               max={5}
                               step={1}
-                              onValueChange={(v) =>
-                                setEditProficiency(v[0] ?? 3)
+                              disabled
+                            />
+                            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                              <span>1</span>
+                              <span>5</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <form onSubmit={submitUpdate} className="space-y-5">
+                          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                            <div className="grid gap-2">
+                              <Label>Skill</Label>
+                              <Popover
+                                open={editSkillOpen}
+                                onOpenChange={setEditSkillOpen}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={editSkillOpen}
+                                    className="w-full justify-between"
+                                    disabled={isBusy || catalogQuery.isLoading}
+                                  >
+                                    <span className="truncate">
+                                      {editSkillId
+                                        ? catalog.find(
+                                            (s2) => s2.id === editSkillId,
+                                          )?.name || editName
+                                        : "Select a skill"}
+                                    </span>
+                                    <ChevronsUpDown className="size-4 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-(--radix-popover-trigger-width) p-0"
+                                  align="start"
+                                >
+                                  <Command>
+                                    <CommandInput
+                                      placeholder="Search skill…"
+                                      value={editSkillSearch}
+                                      onValueChange={setEditSkillSearch}
+                                    />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          className="h-auto w-full justify-start px-2 py-2"
+                                          disabled={
+                                            createCatalogSkill.isPending ||
+                                            !editSkillSearch.trim()
+                                          }
+                                          onClick={async () => {
+                                            const term = editSkillSearch.trim();
+                                            if (!term) return;
+                                            try {
+                                              const res =
+                                                await createCatalogSkill.mutateAsync(
+                                                  { name: term },
+                                                );
+                                              const created = res?.data;
+                                              if (!created?.id) {
+                                                toast.error(
+                                                  "Failed to create skill",
+                                                );
+                                                return;
+                                              }
+                                              toast.success("Skill created");
+                                              setEditSkillId(created.id);
+                                              setEditName(created.name);
+                                              setEditSkillSearch("");
+                                              setEditSkillOpen(false);
+                                            } catch {
+                                              toast.error(
+                                                "Failed to create skill",
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          {createCatalogSkill.isPending ? (
+                                            <Spinner className="size-4" />
+                                          ) : (
+                                            <Plus className="size-4" />
+                                          )}
+                                          Add "{editSkillSearch.trim()}"
+                                        </Button>
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {editMatches.map((opt) => (
+                                          <CommandItem
+                                            key={opt.id}
+                                            value={opt.name}
+                                            onSelect={() => {
+                                              setEditSkillId(opt.id);
+                                              setEditName(opt.name);
+                                              setEditSkillOpen(false);
+                                            }}
+                                          >
+                                            <Check
+                                              className={
+                                                editSkillId === opt.id
+                                                  ? "size-4 opacity-100"
+                                                  : "size-4 opacity-0"
+                                              }
+                                            />
+                                            {opt.name}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={cancelEdit}
+                                disabled={isBusy}
+                              >
+                                <X className="size-4" />
+                                Cancel
+                              </Button>
+                              <Button type="submit" disabled={isBusy}>
+                                {updateSkill.isPending ? (
+                                  <Spinner className="size-4" />
+                                ) : (
+                                  <Save className="size-4" />
+                                )}
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label>Level</Label>
+                            <div className="flex items-center gap-3">
+                              <Slider
+                                value={[editProficiency]}
+                                min={1}
+                                max={5}
+                                step={1}
+                                onValueChange={(v) =>
+                                  setEditProficiency(v[0] ?? 3)
+                                }
+                                disabled={isBusy}
+                              />
+                              <div className="w-12 text-right text-sm tabular-nums text-muted-foreground">
+                                {editProficiency}/5
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>1</span>
+                              <span>5</span>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor={`years-${s.id}`}>Years</Label>
+                            <Input
+                              id={`years-${s.id}`}
+                              inputMode="numeric"
+                              type="number"
+                              min={0}
+                              max={50}
+                              value={editYears}
+                              onChange={(e) =>
+                                setEditYears(Number(e.target.value))
                               }
                               disabled={isBusy}
                             />
-                            <div className="w-12 text-right text-sm tabular-nums text-muted-foreground">
-                              {editProficiency}/5
-                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>1</span>
-                            <span>5</span>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor={`years-${s.id}`}>Years</Label>
-                          <Input
-                            id={`years-${s.id}`}
-                            inputMode="numeric"
-                            type="number"
-                            min={0}
-                            max={50}
-                            value={editYears}
-                            onChange={(e) =>
-                              setEditYears(Number(e.target.value))
-                            }
-                            disabled={isBusy}
-                          />
-                        </div>
-                      </form>
-                    )}
+                        </form>
+                      )}
+                    </div>
                   </Card>
                 );
               })}
@@ -628,36 +640,41 @@ export default function UserSkillsManager() {
         </section>
 
         <aside className="space-y-4">
-          <Card className="rounded-[28px] p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-medium tracking-wide text-muted-foreground">
-                STATUS
-              </div>
-              {skillsQuery.isFetching ? (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Spinner className="size-3" />
-                  syncing
+          <Card className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
+            <div className="pointer-events-none absolute -left-20 -bottom-20 size-56 rounded-full bg-secondary/50 blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs font-medium tracking-wide text-muted-foreground">
+                  STATUS
                 </div>
-              ) : null}
-            </div>
+                {skillsQuery.isFetching ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Spinner className="size-3" />
+                    syncing
+                  </div>
+                ) : null}
+              </div>
 
-            <div className="mt-2 text-lg font-semibold tracking-tight">
-              Keep signals crisp
-            </div>
-            <div className="mt-2 text-sm leading-6 text-muted-foreground">
-              Aim for 8–12 skills. Keep levels honest; overstatement makes match
-              explanations feel off.
-            </div>
+              <div className="mt-2 text-lg font-semibold tracking-tight">
+                Keep signals crisp
+              </div>
+              <div className="mt-2 text-sm leading-6 text-muted-foreground">
+                Aim for 8–12 skills. Keep levels honest; overstatement makes
+                match explanations feel off.
+              </div>
 
-            <div className="mt-5 grid gap-2">
-              <Button
-                variant="outline"
-                onClick={() => skillsQuery.refetch()}
-                disabled={isBusy}
-              >
-                {skillsQuery.isFetching ? <Spinner className="size-4" /> : null}
-                Refresh
-              </Button>
+              <div className="mt-5 grid gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => skillsQuery.refetch()}
+                  disabled={isBusy}
+                >
+                  {skillsQuery.isFetching ? (
+                    <Spinner className="size-4" />
+                  ) : null}
+                  Refresh
+                </Button>
+              </div>
             </div>
           </Card>
         </aside>
