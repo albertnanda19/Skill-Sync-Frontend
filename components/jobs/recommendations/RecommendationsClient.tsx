@@ -35,7 +35,7 @@ async function fetchRecommendations() {
   const { data } = await appApi.get<BackendResponse<BackendRecommendation[]>>(
     "/api/jobs/recommendations",
   );
-  return data.data;
+  return Array.isArray(data?.data) ? data.data : [];
 }
 
 export default function RecommendationsClient() {

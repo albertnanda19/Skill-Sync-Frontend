@@ -31,6 +31,22 @@ export async function GET() {
       },
     );
 
+    if (
+      data &&
+      typeof data === "object" &&
+      "message" in data &&
+      (data as { message?: unknown }).message === "No jobs found" &&
+      !(
+        "data" in data &&
+        Array.isArray((data as { data?: unknown }).data)
+      )
+    ) {
+      return NextResponse.json(
+        { status: 200, message: "ok", data: [] },
+        { status: 200 },
+      );
+    }
+
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
     const status =
@@ -47,6 +63,17 @@ export async function GET() {
         (error as { response?: { data?: { message?: unknown } } }).response?.data
           ?.message) ||
       "Server error";
+
+    if (
+      status === 404 &&
+      typeof message === "string" &&
+      message.toLowerCase().includes("no jobs found")
+    ) {
+      return NextResponse.json(
+        { status: 200, message: "ok", data: [] },
+        { status: 200 },
+      );
+    }
 
     return NextResponse.json(
       {
