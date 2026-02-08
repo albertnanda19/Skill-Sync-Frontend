@@ -9,7 +9,7 @@ import RecommendationCard, {
   type JobRecommendation,
 } from "./RecommendationCard";
 import RecommendationsEmptyState from "./RecommendationsEmptyState";
-import RecommendationsSkeleton from "./RecommendationsSkeleton";
+import AIAnalysisLoading from "./AIAnalysisLoading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { appApi } from "@/lib/axios";
@@ -20,9 +20,20 @@ type BackendRecommendation = {
   company_name?: string;
   location?: string;
   job_url?: string;
+  source?: string;
   match_score?: number;
+  match_reason?: string[];
+  mandatory_missing?: boolean;
   missing_skills?: string[];
 };
+
+type BackendRecommendationsPayload =
+  | BackendRecommendation[]
+  | {
+      generated_at?: string;
+      recommendation_source?: string;
+      jobs?: BackendRecommendation[];
+    };
 
 type BackendResponse<T> = {
   status: number;
@@ -30,11 +41,48 @@ type BackendResponse<T> = {
   data: T;
 };
 
-async function fetchRecommendations() {
-  const { data } = await appApi.get<BackendResponse<BackendRecommendation[]>>(
-    "/api/jobs/recommendations",
-  );
-  return Array.isArray(data?.data) ? data.data : [];
+type NormalizedRecommendations = {
+  generatedAt?: string;
+  recommendationSource?: string;
+  jobs: BackendRecommendation[];
+};
+
+function normalizeRecommendationsPayload(
+  payload: BackendRecommendationsPayload | undefined,
+): NormalizedRecommendations {
+  if (Array.isArray(payload)) {
+    return { jobs: payload };
+  }
+
+  if (payload && typeof payload === "object") {
+    const p = payload as {
+      generated_at?: unknown;
+      recommendation_source?: unknown;
+      jobs?: unknown;
+    };
+
+    const jobs = Array.isArray(p.jobs)
+      ? (p.jobs as BackendRecommendation[])
+      : [];
+    return {
+      generatedAt:
+        typeof p.generated_at === "string" ? p.generated_at : undefined,
+      recommendationSource:
+        typeof p.recommendation_source === "string"
+          ? p.recommendation_source
+          : undefined,
+      jobs,
+    };
+  }
+
+  return { jobs: [] };
+}
+
+async function fetchRecommendations(): Promise<NormalizedRecommendations> {
+  const { data } = await appApi.get<
+    BackendResponse<BackendRecommendationsPayload>
+  >("/api/jobs/recommendations");
+  return normalizeRecommendationsPayload(data?.data);
 }
 
 export default function RecommendationsClient() {
@@ -50,7 +98,7 @@ export default function RecommendationsClient() {
   });
 
   const recommendations = React.useMemo<JobRecommendation[]>(() => {
-    const data = query.data ?? [];
+    const data = query.data?.jobs ?? [];
 
     const mapped = data.map((item) => ({
       id: item.job_id,
@@ -66,6 +114,8 @@ export default function RecommendationsClient() {
 
     return mapped.sort((a, b) => b.matchScore - a.matchScore);
   }, [query.data]);
+
+  const meta = query.data;
 
   React.useEffect(() => {
     const status =
@@ -134,12 +184,17 @@ export default function RecommendationsClient() {
                 · Showing {recommendations.length} personalized jobs
               </span>
             ) : null}
+            {meta?.recommendationSource ? (
+              <span className="ml-2 hidden sm:inline">
+                · Source: {meta.recommendationSource}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
 
       {query.isLoading ? (
-        <RecommendationsSkeleton />
+        <AIAnalysisLoading />
       ) : query.isError ? (
         <div className="rounded-[28px] border bg-card px-6 py-12 shadow-sm">
           <div className="space-y-4">

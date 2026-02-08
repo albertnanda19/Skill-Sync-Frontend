@@ -22,10 +22,10 @@ export default function RecommendationsEmptyState() {
           <EmptyMedia variant="icon">
             <Sparkles className="size-5" />
           </EmptyMedia>
-          <EmptyTitle>No jobs found</EmptyTitle>
+          <EmptyTitle>No relevant recommendations found</EmptyTitle>
           <EmptyDescription>
-            Update your skills to improve matching, or browse available roles
-            and come back for refreshed recommendations.
+            No relevant recommendations found based on your current skills. Try
+            updating your skill profile.
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
