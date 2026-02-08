@@ -22,15 +22,18 @@ function formatUtcIso(iso: string) {
 const UserProfileAside = ({ createdAt }: Props) => {
   return (
     <aside className="space-y-4">
-      <Card className="rounded-[28px] p-6 shadow-sm">
-        <div className="text-xs font-medium tracking-wide text-muted-foreground">
-          ACCOUNT
-        </div>
-        <div className="mt-2 text-lg font-semibold tracking-tight">
-          Member since
-        </div>
-        <div className="mt-2 text-sm leading-6 text-muted-foreground">
-          {formatUtcIso(createdAt)}
+      <Card className="relative overflow-hidden rounded-[28px] border-border bg-background/60 p-6 shadow-sm">
+        <div className="absolute -right-14 -top-14 size-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative">
+          <div className="text-xs font-medium tracking-wide text-muted-foreground">
+            ACCOUNT
+          </div>
+          <div className="mt-2 text-lg font-semibold tracking-tight">
+            Member since
+          </div>
+          <div className="mt-2 text-sm leading-6 text-muted-foreground">
+            {formatUtcIso(createdAt)}
+          </div>
         </div>
       </Card>
     </aside>

@@ -36,8 +36,8 @@ function RoleChips({ roles }: { roles: string[] }) {
       {roles.map((r) => (
         <Badge
           key={r}
-          variant="secondary"
-          className="rounded-full bg-background/70"
+          variant="outline"
+          className="rounded-full bg-background/70 text-foreground"
         >
           {toTitleCase(r)}
         </Badge>
@@ -55,7 +55,7 @@ const UserProfilePreferencesCard = ({
   const levelValue = renderValue(experienceLevel);
 
   return (
-    <Card className="rounded-[28px]">
+    <Card className="rounded-[28px] border-border bg-background/60 shadow-sm">
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -88,7 +88,7 @@ const UserProfilePreferencesCard = ({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-background/60 p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-background/70 p-5">
             <div className="absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-2xl" />
             <div className="relative">
               <div className="text-xs font-medium tracking-wide text-muted-foreground">
@@ -103,7 +103,7 @@ const UserProfilePreferencesCard = ({
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-background/60 p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-background/70 p-5">
             <div className="absolute -left-10 -bottom-10 size-32 rounded-full bg-secondary/40 blur-2xl" />
             <div className="relative">
               <div className="text-xs font-medium tracking-wide text-muted-foreground">

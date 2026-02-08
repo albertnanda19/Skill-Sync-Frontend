@@ -37,8 +37,9 @@ function SkillList({ skills }: { skills: UserMeSkill[] }) {
         return (
           <div
             key={`${s.skill_name}-${s.proficiency_level}-${s.years_experience}`}
-            className="rounded-2xl border border-border bg-background/60 p-4"
+            className="group relative overflow-hidden rounded-2xl border border-border bg-background/70 p-4"
           >
+            <div className="pointer-events-none absolute -right-10 -top-10 size-24 rounded-full bg-primary/10 blur-2xl" />
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold tracking-tight">
@@ -49,7 +50,10 @@ function SkillList({ skills }: { skills: UserMeSkill[] }) {
                 </div>
               </div>
 
-              <Badge variant="secondary" className="shrink-0 tabular-nums">
+              <Badge
+                variant="outline"
+                className="shrink-0 tabular-nums bg-background/70 text-foreground"
+              >
                 {s.years_experience} yrs
               </Badge>
             </div>
@@ -66,7 +70,7 @@ function SkillList({ skills }: { skills: UserMeSkill[] }) {
 
 const UserProfileSkillsCard = ({ core }: Props) => {
   return (
-    <Card className="rounded-[28px]">
+    <Card className="rounded-[28px] border-border bg-background/60 shadow-sm">
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div>

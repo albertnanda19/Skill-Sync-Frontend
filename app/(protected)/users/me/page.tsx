@@ -17,13 +17,19 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto w-full max-w-6xl px-6 pb-20 pt-12">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -right-24 -top-24 size-[28rem] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 size-[30rem] rounded-full bg-secondary/50 blur-3xl" />
+      </div>
+      <main className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-12">
         {/* WIREFRAME: Summary layout | Section per category | CTA inline (edit) */}
         <div className="grid gap-10">
           {userMeQuery.isLoading ? (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Spinner className="size-5" />
-              Loading profile…
+            <div className="rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Spinner className="size-5" />
+                Loading profile…
+              </div>
             </div>
           ) : userMeQuery.isError ? (
             <Alert variant="destructive" className="rounded-[22px]">
