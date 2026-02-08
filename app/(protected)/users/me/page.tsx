@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Pencil, ArrowRight } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,9 +31,6 @@ export default function ProfilePage() {
                 signal is clean.
               </div>
             </div>
-            <Button variant="ghost" asChild>
-              <Link href="/dashboard">Back to dashboard</Link>
-            </Button>
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
@@ -121,17 +118,7 @@ export default function ProfilePage() {
                   After edits, your dashboard will reflect the new signal
                   instantly.
                 </div>
-                <div className="mt-6 grid gap-2">
-                  <Button asChild>
-                    <Link href="/dashboard">
-                      Go to dashboard
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/jobs">Browse jobs</Link>
-                  </Button>
-                </div>
+                <div className="mt-6 grid gap-2"></div>
               </Card>
             </aside>
           </div>

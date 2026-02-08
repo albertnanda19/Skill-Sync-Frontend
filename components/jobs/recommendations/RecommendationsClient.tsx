@@ -10,7 +10,6 @@ import RecommendationCard, {
 } from "./RecommendationCard";
 import RecommendationsEmptyState from "./RecommendationsEmptyState";
 import RecommendationsSkeleton from "./RecommendationsSkeleton";
-import JobsSectionNav from "../JobsSectionNav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { appApi } from "@/lib/axios";
@@ -123,18 +122,6 @@ export default function RecommendationsClient() {
                 profile, so keeping your skills up to date improves the quality
                 of results.
               </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-2 md:items-end">
-              <div className="text-xs font-medium tracking-wide text-muted-foreground">
-                VIEW
-              </div>
-              <JobsSectionNav
-                items={[
-                  { label: "Browse", href: "/jobs" },
-                  { label: "Recommendations", href: "/jobs/recommendations" },
-                ]}
-              />
             </div>
           </div>
         </div>

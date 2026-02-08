@@ -41,9 +41,6 @@ export default function PreferencesPage() {
                 the match scoring is.
               </div>
             </div>
-            <Button variant="ghost" asChild>
-              <Link href="/profile">Back to profile</Link>
-            </Button>
           </div>
 
           <Card className="rounded-[28px]">

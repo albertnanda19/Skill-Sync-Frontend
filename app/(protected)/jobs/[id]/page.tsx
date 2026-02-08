@@ -209,9 +209,6 @@ export default async function JobDetailPage({
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/jobs">Back to listing</Link>
-                  </Button>
                 </div>
               </div>
 

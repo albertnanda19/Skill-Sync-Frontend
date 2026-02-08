@@ -133,9 +133,6 @@ export default function SkillsGapPage() {
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/dashboard">Back to dashboard</Link>
-                  </Button>
                 </div>
               </Card>
 

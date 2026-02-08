@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ArrowRight, SlidersHorizontal, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,18 +74,6 @@ export default function DashboardPage() {
               Your matches, explained
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
-            <Link href="/jobs">Browse jobs</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/profile/preferences">
-              <SlidersHorizontal className="size-4" />
-              Preferences
-            </Link>
-          </Button>
         </div>
       </header>
 
