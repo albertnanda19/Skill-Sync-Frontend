@@ -39,7 +39,6 @@ function SkillList({ skills }: { skills: UserMeSkill[] }) {
             key={`${s.skill_name}-${s.proficiency_level}-${s.years_experience}`}
             className="group relative overflow-hidden rounded-2xl border border-border bg-background/70 p-4"
           >
-            <div className="pointer-events-none absolute -right-10 -top-10 size-24 rounded-full bg-primary/10 blur-2xl" />
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold tracking-tight">

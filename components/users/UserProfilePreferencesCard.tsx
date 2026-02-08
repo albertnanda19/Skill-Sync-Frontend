@@ -89,7 +89,6 @@ const UserProfilePreferencesCard = ({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="relative overflow-hidden rounded-2xl border border-border bg-background/70 p-5">
-            <div className="absolute -right-10 -top-10 size-32 rounded-full bg-primary/10 blur-2xl" />
             <div className="relative">
               <div className="text-xs font-medium tracking-wide text-muted-foreground">
                 LOCATION
@@ -104,7 +103,6 @@ const UserProfilePreferencesCard = ({
           </div>
 
           <div className="relative overflow-hidden rounded-2xl border border-border bg-background/70 p-5">
-            <div className="absolute -left-10 -bottom-10 size-32 rounded-full bg-secondary/40 blur-2xl" />
             <div className="relative">
               <div className="text-xs font-medium tracking-wide text-muted-foreground">
                 EXPERIENCE

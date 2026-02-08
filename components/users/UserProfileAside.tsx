@@ -23,7 +23,6 @@ const UserProfileAside = ({ createdAt }: Props) => {
   return (
     <aside className="space-y-4">
       <Card className="relative overflow-hidden rounded-[28px] border-border bg-background/60 p-6 shadow-sm">
-        <div className="absolute -right-14 -top-14 size-40 rounded-full bg-primary/10 blur-3xl" />
         <div className="relative">
           <div className="text-xs font-medium tracking-wide text-muted-foreground">
             ACCOUNT

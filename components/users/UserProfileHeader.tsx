@@ -31,7 +31,6 @@ const UserProfileHeader = ({ email, fullName }: Props) => {
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-start gap-4">
           <div className="relative">
-            <div className="absolute -inset-6 rounded-full bg-primary/10 blur-2xl" />
             <div className="relative grid size-12 place-items-center rounded-2xl border border-border bg-background/70 text-sm font-semibold tracking-tight">
               {initials}
             </div>

@@ -83,9 +83,6 @@ const PreferencesPreview = React.memo(
 
     return (
       <Card className="relative overflow-hidden rounded-[28px] border-border bg-background/60 p-6 shadow-sm">
-        <div className="absolute -right-16 -top-16 size-48 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 size-52 rounded-full bg-secondary/50 blur-3xl" />
-
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
             <div>

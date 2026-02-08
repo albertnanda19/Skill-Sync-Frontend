@@ -190,7 +190,6 @@ export default function UserSkillsManager() {
   return (
     <div className="grid gap-10">
       <div className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
-        <div className="pointer-events-none absolute -left-24 -bottom-24 size-72 rounded-full bg-secondary/50 blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Badge variant="secondary" className="rounded-full">
@@ -213,7 +212,6 @@ export default function UserSkillsManager() {
       <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="space-y-4">
           <Card className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm md:p-8">
-            <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/10 blur-3xl" />
             <form
               onSubmit={submitCreate}
               className="relative grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
@@ -404,7 +402,6 @@ export default function UserSkillsManager() {
                     key={s.id}
                     className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm"
                   >
-                    <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/10 blur-3xl" />
                     <div className="relative">
                       {!isEditing ? (
                         <div className="space-y-5">
@@ -641,7 +638,6 @@ export default function UserSkillsManager() {
 
         <aside className="space-y-4">
           <Card className="relative overflow-hidden rounded-[28px] border border-border bg-background/60 p-6 shadow-sm">
-            <div className="pointer-events-none absolute -left-20 -bottom-20 size-56 rounded-full bg-secondary/50 blur-3xl" />
             <div className="relative">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs font-medium tracking-wide text-muted-foreground">

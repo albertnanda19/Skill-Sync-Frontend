@@ -17,10 +17,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -right-24 -top-24 size-[28rem] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 size-[30rem] rounded-full bg-secondary/50 blur-3xl" />
-      </div>
       <main className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-12">
         {/* WIREFRAME: Summary layout | Section per category | CTA inline (edit) */}
         <div className="grid gap-10">
