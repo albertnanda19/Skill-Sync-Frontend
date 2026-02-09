@@ -282,6 +282,28 @@ export default function JobsClient({
 
   const items = data?.items ?? [];
 
+  const activeSourceKey = React.useMemo(() => {
+    const raw = (filters.source_id ?? "").trim();
+    if (!raw) return "";
+
+    const requested = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (requested.length === 0) return "";
+
+    const match = sources.find((opt) =>
+      requested.every((id) => opt.ids.includes(id)),
+    );
+    return match?.key ?? "";
+  }, [filters.source_id, sources]);
+
+  const activeKeywordNorm = React.useMemo(
+    () => wsKeyword.trim().toLowerCase().replace(/\s+/g, " "),
+    [wsKeyword],
+  );
+
   React.useEffect(() => {
     const first = data?.items?.[0];
     const createdAt = first?.created_at;
@@ -303,11 +325,31 @@ export default function JobsClient({
       if (!lastEvent) return;
       if (lastEvent.type !== "jobs_updated") return;
       if (!wsKeyword) return;
-      if (lastEvent.keyword.trim() !== wsKeyword.trim()) return;
+
+      const eventKeywordNorm = lastEvent.keyword
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+      if (eventKeywordNorm !== activeKeywordNorm) return;
+
+      if (activeSourceKey && lastEvent.source) {
+        const eventSourceNorm = lastEvent.source
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+        const activeSourceNorm = activeSourceKey
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+        if (eventSourceNorm !== activeSourceNorm) return;
+      }
 
       setNewJobsCount(lastEvent.new_jobs || 0);
       setSearchStatus("updated");
       setLastUpdatedAt(new Date());
+
+      const shouldRefetch = lastEvent.has_new_data ?? true;
+      if (!shouldRefetch) return;
 
       if (!latestCreatedAt) {
         queryClient.invalidateQueries({ queryKey: currentJobsQueryKey });
@@ -411,6 +453,8 @@ export default function JobsClient({
   }, [
     currentJobsQueryKey,
     filters,
+    activeKeywordNorm,
+    activeSourceKey,
     items,
     lastEvent,
     latestCreatedAt,

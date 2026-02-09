@@ -61,7 +61,10 @@ export default function ProfilePage() {
 
               <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                 <section className="space-y-6">
-                  <UserProfileSkillsCard core={profile.skills.core} />
+                  <UserProfileSkillsCard
+                    core={profile.skills.core}
+                    developing={profile.skills.developing}
+                  />
 
                   <UserProfilePreferencesCard
                     preferredRoles={profile.preferences.preferred_roles}

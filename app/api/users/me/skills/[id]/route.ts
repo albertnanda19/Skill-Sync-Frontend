@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { backendApi } from "@/lib/axios";
 
@@ -15,13 +15,13 @@ async function getAccessToken() {
 }
 
 export async function PUT(
-  req: Request,
-  context: { params: { id: string } },
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const url = new URL(req.url);
     const rawId = url.pathname.split("/").pop() ?? "";
-    const { id } = context.params;
+    const { id } = await context.params;
     const accessToken = await getAccessToken();
 
     if (!accessToken) {
@@ -73,25 +73,27 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
-  context: { params: { id: string } },
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const url = new URL(req.url);
     const rawId = url.pathname.split("/").pop() ?? "";
-    const { id } = context.params;
+    const { id } = await context.params;
     const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json({ message: "Missing access token" }, { status: 401 });
     }
 
-    if (!rawId) {
+    if (!rawId && !id) {
       return NextResponse.json({ message: "Missing id" }, { status: 400 });
     }
 
+    const targetId = rawId || id;
+
     const { data } = await backendApi.delete<BackendResponse<null>>(
-      `/api/v1/users/me/skills/${rawId}`,
+      `/api/v1/users/me/skills/${targetId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

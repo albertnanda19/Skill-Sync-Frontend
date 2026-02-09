@@ -12,10 +12,14 @@ export default function RefreshAuthPage() {
   useEffect(() => {
     let cancelled = false;
 
+    function getNextPath() {
+      const rawNext = searchParams?.get("next") ?? "/jobs";
+      return rawNext.startsWith("/") ? rawNext : "/jobs";
+    }
+
     async function refresh() {
       try {
-        const rawNext = searchParams.get("next") || "/jobs";
-        const next = rawNext.startsWith("/") ? rawNext : "/jobs";
+        const next = getNextPath();
 
         const res = await fetch("/api/auth/refresh-token", {
           method: "POST",
@@ -33,8 +37,7 @@ export default function RefreshAuthPage() {
           router.replace(next);
         }
       } catch {
-        const rawNext = searchParams.get("next") || "/jobs";
-        const next = rawNext.startsWith("/") ? rawNext : "/jobs";
+        const next = getNextPath();
         router.replace(`/login?next=${encodeURIComponent(next)}`);
       }
     }

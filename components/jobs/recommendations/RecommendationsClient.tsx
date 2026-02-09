@@ -14,6 +14,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { appApi } from "@/lib/axios";
 
+function formatGeneratedAt(value: string | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 type BackendRecommendation = {
   job_id: string;
   title?: string;
@@ -93,6 +106,7 @@ export default function RecommendationsClient() {
     queryFn: fetchRecommendations,
     staleTime: 60 * 1000,
     retry: 1,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
@@ -106,10 +120,23 @@ export default function RecommendationsClient() {
       company: item.company_name ?? "",
       location: item.location ?? "",
       matchScore: typeof item.match_score === "number" ? item.match_score : 0,
+      matchReason: Array.isArray(item.match_reason)
+        ? item.match_reason.filter(
+            (v): v is string => typeof v === "string" && v.trim().length > 0,
+          )
+        : [],
+      mandatoryMissing:
+        typeof item.mandatory_missing === "boolean"
+          ? item.mandatory_missing
+          : false,
       missingSkills: Array.isArray(item.missing_skills)
         ? item.missing_skills
+            .filter((v): v is string => typeof v === "string")
+            .map((v) => v.trim())
+            .filter(Boolean)
         : [],
       jobUrl: item.job_url ?? "",
+      source: typeof item.source === "string" ? item.source : "",
     }));
 
     return mapped.sort((a, b) => b.matchScore - a.matchScore);
@@ -182,6 +209,11 @@ export default function RecommendationsClient() {
             {recommendations.length ? (
               <span className="ml-2">
                 · Showing {recommendations.length} personalized jobs
+              </span>
+            ) : null}
+            {meta?.generatedAt ? (
+              <span className="ml-2 hidden md:inline">
+                · Generated {formatGeneratedAt(meta.generatedAt)}
               </span>
             ) : null}
             {meta?.recommendationSource ? (

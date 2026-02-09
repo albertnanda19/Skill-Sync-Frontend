@@ -70,15 +70,8 @@ function normalizeUserMe(payload: unknown): UserMeResponse {
     ? rawSkills.developing
     : [];
 
-  const allSkills = [...coreRaw, ...developingRaw].filter(isUserMeSkill);
-
-  const core: UserMeSkill[] = [];
-  const developing: UserMeSkill[] = [];
-
-  for (const s of allSkills) {
-    const isCore = s.proficiency_level >= 4 || s.years_experience >= 3;
-    (isCore ? core : developing).push(s);
-  }
+  const core = coreRaw.filter(isUserMeSkill);
+  const developing = developingRaw.filter(isUserMeSkill);
 
   const rawPreferences = (u.preferences ?? {}) as Record<string, unknown>;
   const preferred_roles = Array.isArray(rawPreferences.preferred_roles)

@@ -21,6 +21,7 @@ import type { UserMeSkill } from "@/hooks/useUserMe";
 
 type Props = {
   core: UserMeSkill[];
+  developing: UserMeSkill[];
 };
 
 function SkillList({ skills }: { skills: UserMeSkill[] }) {
@@ -67,7 +68,34 @@ function SkillList({ skills }: { skills: UserMeSkill[] }) {
   );
 }
 
-const UserProfileSkillsCard = ({ core }: Props) => {
+function SkillsGroup({
+  title,
+  badgeLabel,
+  skills,
+}: {
+  title: string;
+  badgeLabel: string;
+  skills: UserMeSkill[];
+}) {
+  return (
+    <div className="rounded-2xl bg-muted/40 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium">{title}</div>
+          <Badge variant="secondary" className="rounded-full text-[11px]">
+            {badgeLabel}
+          </Badge>
+        </div>
+        <div className="text-xs tabular-nums text-muted-foreground">
+          {skills.length}
+        </div>
+      </div>
+      <SkillList skills={skills} />
+    </div>
+  );
+}
+
+const UserProfileSkillsCard: React.FC<Props> = ({ core, developing }) => {
   return (
     <Card className="rounded-[28px] border-border bg-background/60 shadow-sm">
       <CardHeader className="space-y-2">
@@ -87,15 +115,12 @@ const UserProfileSkillsCard = ({ core }: Props) => {
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <div className="rounded-2xl bg-muted/40 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-medium">Core skills</div>
-            <div className="text-xs tabular-nums text-muted-foreground">
-              {core.length}
-            </div>
-          </div>
-          <SkillList skills={core} />
-        </div>
+        <SkillsGroup title="Core skills" badgeLabel="Core" skills={core} />
+        <SkillsGroup
+          title="Developing skills"
+          badgeLabel="Developing"
+          skills={developing}
+        />
       </CardContent>
     </Card>
   );

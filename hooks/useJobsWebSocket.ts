@@ -14,6 +14,9 @@ export type JobsUpdatedEvent = {
   type: "jobs_updated";
   keyword: string;
   new_jobs: number;
+  has_new_data?: boolean;
+  max_job_created_at?: string;
+  source?: string;
 };
 
 function normalizeJobsUpdatedEvent(payload: unknown): JobsUpdatedEvent | null {
@@ -32,10 +35,25 @@ function normalizeJobsUpdatedEvent(payload: unknown): JobsUpdatedEvent | null {
         ? Number(newJobsRaw)
         : 0;
 
+  const hasNewDataRaw = p.has_new_data;
+  const has_new_data = typeof hasNewDataRaw === "boolean" ? hasNewDataRaw : undefined;
+
+  const maxCreatedAtRaw = p.max_job_created_at;
+  const max_job_created_at =
+    typeof maxCreatedAtRaw === "string" && maxCreatedAtRaw.trim()
+      ? maxCreatedAtRaw.trim()
+      : undefined;
+
+  const sourceRaw = p.source;
+  const source = typeof sourceRaw === "string" && sourceRaw.trim() ? sourceRaw.trim() : undefined;
+
   return {
     type: "jobs_updated",
     keyword,
     new_jobs: Math.max(0, Math.trunc(newJobs)),
+    ...(typeof has_new_data === "boolean" ? { has_new_data } : {}),
+    ...(max_job_created_at ? { max_job_created_at } : {}),
+    ...(source ? { source } : {}),
   };
 }
 
@@ -126,7 +144,8 @@ export function useJobsWebSocket(keyword: string, connectKey = 0) {
 
     const onMessage = (payload: unknown) => {
       const evt = normalizeJobsUpdatedEvent(payload);
-      if (evt) setLastEvent(evt);
+      if (!evt) return;
+      setLastEvent(evt);
       setIsRefreshing(true);
     };
 
