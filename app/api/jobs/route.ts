@@ -46,6 +46,16 @@ function normalizeSkills(value: string | null) {
   return parts.length ? parts.join(",") : undefined;
 }
 
+function normalizeSourceId(value: string | null) {
+  const v = typeof value === "string" ? value.trim() : "";
+  if (!v) return undefined;
+  const parts = v
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts.join(",") : undefined;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -54,6 +64,7 @@ export async function GET(req: NextRequest) {
     const companyName = normalizeString(url.searchParams.get("company_name"));
     const location = normalizeString(url.searchParams.get("location"));
     const skills = normalizeSkills(url.searchParams.get("skills"));
+    const sourceId = normalizeSourceId(url.searchParams.get("source_id"));
     const limit = parseLimit(url.searchParams.get("limit"));
     const offset = parseOffset(url.searchParams.get("offset"));
 
@@ -64,6 +75,7 @@ export async function GET(req: NextRequest) {
       ...(companyName ? { company_name: companyName } : {}),
       ...(location ? { location } : {}),
       ...(skills ? { skills } : {}),
+      ...(sourceId ? { source_id: sourceId } : {}),
     };
 
     const isPublic = process.env.PUBLIC_JOBS === "true";

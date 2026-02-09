@@ -28,7 +28,16 @@ export default function SearchStatusIndicator({
   newJobsCount: number;
   lastUpdatedAt: Date | null;
 }) {
-  if (status === "idle") return null;
+  const [nowTick, setNowTick] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!lastUpdatedAt) return;
+    const t = window.setInterval(() => setNowTick((x) => x + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, [lastUpdatedAt]);
+
+  const shouldRender = status !== "idle" || Boolean(lastUpdatedAt);
+  if (!shouldRender) return null;
 
   const baseClassName =
     "w-full rounded-full border bg-primary/5 px-4 py-2 text-xs text-foreground shadow-sm transition-all duration-200 animate-in fade-in";
@@ -44,6 +53,7 @@ export default function SearchStatusIndicator({
     );
   }
 
+  void nowTick;
   const relative = formatRelativeUpdate(lastUpdatedAt);
 
   return (

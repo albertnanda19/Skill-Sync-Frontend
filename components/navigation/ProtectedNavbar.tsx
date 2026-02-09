@@ -17,6 +17,7 @@ export default function ProtectedNavbar() {
   const [closeSignal, setCloseSignal] = React.useState(0);
 
   const activeGroup = React.useMemo(() => {
+    if (!pathname) return null;
     if (pathname.startsWith("/jobs")) return "jobs";
     if (pathname.startsWith("/users/me")) return "profile";
     return null;

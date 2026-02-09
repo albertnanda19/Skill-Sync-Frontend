@@ -1,21 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { RotateCcw, Search, SlidersHorizontal, RefreshCw } from "lucide-react";
 
 import { jobsQueryKey, useJobs, type JobsFilters } from "@/hooks/useJobs";
 import { useJobsWebSocket } from "@/hooks/useJobsWebSocket";
 import { useQueryClient } from "@tanstack/react-query";
+import { useJobSources } from "@/hooks/useJobSources";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SearchStatusIndicator, {
   type SearchStatus,
 } from "@/components/jobs/SearchStatusIndicator";
 import NewJobsBanner from "@/components/jobs/NewJobsBanner";
+import JobSourceBadge from "@/components/jobs/JobSourceBadge";
 
 function ScoreBadge({ score }: { score: number }) {
   const className =
@@ -73,58 +82,22 @@ function parseDescription(value: string) {
   return { kind: "list" as const, items };
 }
 
-function renderInlineMarkdown(value: string, keyPrefix: string) {
-  const nodes: React.ReactNode[] = [];
-  let i = 0;
-  let part = 0;
-
-  while (i < value.length) {
-    const nextBold = value.indexOf("**", i);
-    const nextItalic = value.indexOf("*", i);
-
-    const next =
-      nextBold !== -1 && (nextItalic === -1 || nextBold < nextItalic)
-        ? { type: "bold" as const, idx: nextBold, len: 2 }
-        : nextItalic !== -1
-          ? { type: "italic" as const, idx: nextItalic, len: 1 }
-          : null;
-
-    if (!next) {
-      nodes.push(value.slice(i));
-      break;
-    }
-
-    if (next.idx > i) {
-      nodes.push(value.slice(i, next.idx));
-    }
-
-    const start = next.idx + next.len;
-    const end = value.indexOf(next.type === "bold" ? "**" : "*", start);
-    if (end === -1) {
-      nodes.push(value.slice(next.idx));
-      break;
-    }
-
-    const inner = value.slice(start, end);
-    const k = `${keyPrefix}-md-${part}`;
-    part += 1;
-
-    if (next.type === "bold") {
-      nodes.push(<strong key={k}>{inner}</strong>);
-      i = end + 2;
-    } else {
-      nodes.push(<em key={k}>{inner}</em>);
-      i = end + 1;
-    }
-  }
-
-  return nodes;
+function stripInlineFormatting(value: string) {
+  return value
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
 }
 
 function renderDescription(value: string, keyPrefix: string) {
   const normalized = value
+    .replace(/\r\n/g, "\n")
     .replace(/\s*-{6,}\s*/g, "\n\n---\n\n")
-    .replace(/\r\n/g, "\n");
+    .replace(/\s*###\s*/g, "\n\n### ")
+    .replace(/\n{3,}/g, "\n\n");
 
   const blocks = normalized
     .split(/\n\n+/)
@@ -136,17 +109,76 @@ function renderDescription(value: string, keyPrefix: string) {
       return <hr key={`${keyPrefix}-hr-${idx}`} className="my-3" />;
     }
 
+    if (block.startsWith("### ")) {
+      const heading = block
+        .replace(/^###\s+/, "")
+        .replace(/\s*#{3,}\s*$/g, "")
+        .trim();
+
+      return (
+        <p key={`${keyPrefix}-h-${idx}`} className={idx === 0 ? "" : "mt-3"}>
+          {stripInlineFormatting(heading)}
+        </p>
+      );
+    }
+
     const lines = block
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
+
+    const bulletItems = lines
+      .map((l) => l.match(/^[-*•]\s+(.*)$/)?.[1])
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+
+    if (bulletItems.length === lines.length && bulletItems.length > 0) {
+      return (
+        <ul
+          key={`${keyPrefix}-ul-${idx}`}
+          className={
+            idx === 0
+              ? "list-disc space-y-1 pl-5"
+              : "mt-2 list-disc space-y-1 pl-5"
+          }
+        >
+          {bulletItems.map((item, i) => (
+            <li key={`${keyPrefix}-ul-${idx}-${i}`}>
+              {stripInlineFormatting(item)}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    const numberedItems = lines
+      .map((l) => l.match(/^\d{1,3}[.)]\s+(.*)$/)?.[1])
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+
+    if (numberedItems.length === lines.length && numberedItems.length > 0) {
+      return (
+        <ol
+          key={`${keyPrefix}-ol-${idx}`}
+          className={
+            idx === 0
+              ? "list-decimal space-y-1 pl-5"
+              : "mt-2 list-decimal space-y-1 pl-5"
+          }
+        >
+          {numberedItems.map((item, i) => (
+            <li key={`${keyPrefix}-ol-${idx}-${i}`}>
+              {stripInlineFormatting(item)}
+            </li>
+          ))}
+        </ol>
+      );
+    }
 
     return (
       <p key={`${keyPrefix}-p-${idx}`} className={idx === 0 ? "" : "mt-2"}>
         {lines.map((line, lineIdx) => (
           <React.Fragment key={`${keyPrefix}-l-${idx}-${lineIdx}`}>
             {lineIdx > 0 ? <br /> : null}
-            {renderInlineMarkdown(line, `${keyPrefix}-${idx}-${lineIdx}`)}
+            {stripInlineFormatting(line)}
           </React.Fragment>
         ))}
       </p>
@@ -156,14 +188,14 @@ function renderDescription(value: string, keyPrefix: string) {
 
 export default function JobsClient({
   initialFilters,
-  initialLimit = 20,
   initialOffset = 0,
 }: {
   initialFilters?: JobsFilters;
-  initialLimit?: number;
   initialOffset?: number;
 }) {
   const queryClient = useQueryClient();
+  const { data: jobSources, isPending: isSourcesPending } = useJobSources();
+  const sources = jobSources ?? [];
 
   const [filters, setFilters] = React.useState<JobsFilters>(
     () => initialFilters ?? {},
@@ -178,19 +210,44 @@ export default function JobsClient({
     null,
   );
   const [bannerCount, setBannerCount] = React.useState(0);
+  const [recentJobIds, setRecentJobIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
   const [draft, setDraft] = React.useState<{
     title: string;
     company_name: string;
     location: string;
     skills: string;
+    source_key: string;
   }>(() => ({
     title: initialFilters?.title ?? "",
     company_name: initialFilters?.company_name ?? "",
     location: initialFilters?.location ?? "",
     skills: initialFilters?.skills ?? "",
+    source_key: "",
   }));
 
-  const [limit, setLimit] = React.useState(() => initialLimit);
+  React.useEffect(() => {
+    const initial = (initialFilters?.source_id ?? "").trim();
+    if (!initial) return;
+    if (sources.length === 0) return;
+
+    const requested = initial
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (requested.length === 0) return;
+
+    const match = sources.find((opt) =>
+      requested.every((id) => opt.ids.includes(id)),
+    );
+    if (!match) return;
+
+    setDraft((d) => (d.source_key ? d : { ...d, source_key: match.key }));
+  }, [initialFilters?.source_id, sources]);
+
+  const limit = 20;
   const [offset, setOffset] = React.useState(() => initialOffset);
 
   const wsKeyword = React.useMemo(() => {
@@ -238,14 +295,6 @@ export default function JobsClient({
     const t = window.setTimeout(() => setBannerCount(0), 4000);
     return () => window.clearTimeout(t);
   }, [bannerCount]);
-
-  React.useEffect(() => {
-    if (searchStatus !== "updated") return;
-    const t = window.setTimeout(() => {
-      setSearchStatus("idle");
-    }, 5000);
-    return () => window.clearTimeout(t);
-  }, [searchStatus]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -305,6 +354,23 @@ export default function JobsClient({
             (j) => !existingIds.has(j.id),
           );
           const nextItems = [...dedupedNew, ...oldItems].slice(0, 100);
+
+          if (dedupedNew.length > 0) {
+            const ids = dedupedNew
+              .map((j) => j.id)
+              .filter(
+                (id): id is string =>
+                  typeof id === "string" && id.trim().length > 0,
+              );
+            if (ids.length > 0) {
+              setRecentJobIds((prev) => {
+                const next = new Set(prev);
+                for (const id of ids) next.add(id);
+                return next;
+              });
+            }
+          }
+
           const oldTotal =
             typeof oldData.total === "number"
               ? oldData.total
@@ -353,6 +419,14 @@ export default function JobsClient({
   ]);
 
   React.useEffect(() => {
+    if (recentJobIds.size === 0) return;
+    const t = window.setTimeout(() => {
+      setRecentJobIds(new Set());
+    }, 4500);
+    return () => window.clearTimeout(t);
+  }, [recentJobIds]);
+
+  React.useEffect(() => {
     setLatestCreatedAt(null);
     setBannerCount(0);
   }, [wsKeyword, filters]);
@@ -378,14 +452,38 @@ export default function JobsClient({
     setHasApplied(true);
     setApplyCount((c) => c + 1);
     setAppliedKeyword(next.title.trim());
+
+    if (!next.title.trim()) {
+      setLastUpdatedAt(null);
+      setSearchStatus("idle");
+    }
+
+    const selected = next.source_key
+      ? sources.find((s) => s.key === next.source_key)
+      : undefined;
+    const sourceIdParam = selected?.ids?.length ? selected.ids.join(",") : "";
+
     setFilters({
       title: next.title.trim() || undefined,
       company_name: next.company_name.trim() || undefined,
       location: next.location.trim() || undefined,
       skills: toCommaSeparatedSkills(next.skills) || undefined,
+      source_id: sourceIdParam || undefined,
     });
     setOffset(0);
   }
+
+  const shouldShowLiveUi = Boolean(wsKeyword);
+  const shouldShowSearchStatus = Boolean(wsKeyword);
+  const showNonTitleInfo =
+    hasApplied &&
+    !wsKeyword &&
+    Boolean(
+      filters.company_name ||
+      filters.location ||
+      filters.skills ||
+      filters.source_id,
+    );
 
   return (
     <div className="flex flex-col gap-6">
@@ -456,20 +554,56 @@ export default function JobsClient({
             />
           </div>
 
+          <div className="md:col-span-12">
+            <div className="text-xs font-medium tracking-wide text-muted-foreground">
+              Sources
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Select
+                value={draft.source_key || "all"}
+                onValueChange={(v) =>
+                  setDraft((d) => ({ ...d, source_key: v === "all" ? "" : v }))
+                }
+              >
+                <SelectTrigger className="w-full md:w-[280px]" size="sm">
+                  <SelectValue placeholder="All sources" />
+                  {isSourcesPending ? (
+                    <Spinner className="ml-1 size-3" />
+                  ) : null}
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="all">All sources</SelectItem>
+                  {sources.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="md:col-span-12 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
-              <Button type="submit" variant="default">
-                Apply filters
+              <Button
+                type="submit"
+                variant="default"
+                className="bg-linear-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:from-indigo-700 hover:to-violet-700"
+              >
+                <SlidersHorizontal className="size-4" />
+                Apply
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="border-border/60 bg-background/60 shadow-sm hover:bg-accent"
                 onClick={() => {
                   const cleared = {
                     title: "",
                     company_name: "",
                     location: "",
                     skills: "",
+                    source_key: "",
                   };
                   setDraft(cleared);
                   setHasApplied(false);
@@ -483,17 +617,20 @@ export default function JobsClient({
                   setOffset(0);
                 }}
               >
+                <RotateCcw className="size-4" />
                 Reset
               </Button>
               <Button
                 type="button"
                 variant="secondary"
+                className="bg-primary/10 text-primary shadow-sm hover:bg-primary/15"
                 onClick={() => {
                   setSearchStatus("searching");
                   setNewJobsCount(0);
                   refetch();
                 }}
               >
+                <RefreshCw className="size-4" />
                 Refresh
               </Button>
             </div>
@@ -501,7 +638,7 @@ export default function JobsClient({
             <div className="flex items-center gap-3">
               {hasApplied ? (
                 <div className="flex flex-col gap-1">
-                  {wsKeyword ? (
+                  {shouldShowLiveUi ? (
                     <div className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs">
                       <span
                         className={`size-2 rounded-full ${
@@ -518,56 +655,47 @@ export default function JobsClient({
                     </div>
                   ) : (
                     <div className="text-xs text-muted-foreground">
-                      Tambahkan keyword minimal 2 karakter untuk live update
+                      Live updates are available when searching by Title (min. 2
+                      characters)
                     </div>
                   )}
 
-                  {wsKeyword ? (
+                  {shouldShowLiveUi ? (
                     <div className="text-xs text-muted-foreground">
-                      Sedang mencari loker lainnya — daftar akan bertambah
-                      secara real-time
+                      Searching for more jobs — this list will grow in real time
                     </div>
                   ) : null}
 
                   {isRefreshing ? (
                     <div className="text-xs text-muted-foreground">
-                      Ada job baru — mengupdate...
+                      New jobs detected — updating...
                     </div>
                   ) : null}
                 </div>
               ) : null}
-
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-muted-foreground">Per page</div>
-                <div className="flex items-center gap-2">
-                  {[10, 20, 50].map((n) => (
-                    <Button
-                      key={n}
-                      type="button"
-                      variant={limit === n ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setLimit(n);
-                        setOffset(0);
-                      }}
-                    >
-                      {n}
-                    </Button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </form>
       </div>
 
-      <SearchStatusIndicator
-        status={searchStatus}
-        newJobsCount={newJobsCount}
-        lastUpdatedAt={lastUpdatedAt}
-      />
+      {showNonTitleInfo ? (
+        <div className="w-full rounded-[20px] border bg-card px-4 py-3 text-xs text-muted-foreground shadow-sm">
+          Live updates and the “Updated just now” indicator are only available
+          when searching by <span className="text-foreground">Title</span>. For
+          other filters (Company, Location, Skills, Source), results are loaded
+          from existing data.
+        </div>
+      ) : null}
 
-      <NewJobsBanner count={bannerCount} />
+      {shouldShowSearchStatus ? (
+        <SearchStatusIndicator
+          status={searchStatus}
+          newJobsCount={newJobsCount}
+          lastUpdatedAt={lastUpdatedAt}
+        />
+      ) : null}
+
+      {shouldShowSearchStatus ? <NewJobsBanner count={bannerCount} /> : null}
 
       {isError ? (
         <Alert variant="destructive">
@@ -587,8 +715,25 @@ export default function JobsClient({
             Loading jobs...
           </div>
         ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No jobs found
+          <div className="grid place-items-center px-6 py-16 text-center">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Search className="size-7 animate-pulse" />
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <div className="text-lg font-semibold tracking-tight sm:text-xl">
+                No matching jobs found
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Try adjusting your filters or searching with a different Title.
+              </div>
+
+              <div className="mx-auto flex w-fit items-center justify-center gap-2 pt-2 text-sm text-muted-foreground">
+                <span className="inline-block size-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:0ms]" />
+                <span className="inline-block size-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:150ms]" />
+                <span className="inline-block size-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:300ms]" />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid gap-0">
@@ -602,20 +747,25 @@ export default function JobsClient({
                   job.source_url
                     ? "cursor-pointer transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     : "cursor-default"
+                } ${
+                  recentJobIds.has(job.id)
+                    ? "animate-in fade-in slide-in-from-top-1 bg-primary/5"
+                    : ""
                 }`}
                 onClick={(e) => {
                   if (!job.source_url) e.preventDefault();
                 }}
               >
-                <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
+                <div className="grid gap-4">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-medium tracking-tight">
+                      <div className="text-base font-medium tracking-tight">
                         {job.title}
                       </div>
                       {typeof job.matching_score === "number" ? (
                         <ScoreBadge score={job.matching_score} />
                       ) : null}
+                      <JobSourceBadge sourceUrl={job.source_url} />
                     </div>
 
                     <div className="text-xs text-muted-foreground">
@@ -626,7 +776,7 @@ export default function JobsClient({
                     </div>
 
                     {job.description ? (
-                      <div className="pt-2 text-sm text-muted-foreground">
+                      <div className="pt-2 text-sm text-foreground">
                         {(() => {
                           const parsed = parseDescription(job.description);
                           if (parsed.kind === "list") {
@@ -634,10 +784,7 @@ export default function JobsClient({
                               <ul className="list-disc space-y-1 pl-5">
                                 {parsed.items.map((item, i) => (
                                   <li key={`${job.id}-desc-${i}`}>
-                                    {renderInlineMarkdown(
-                                      item,
-                                      `${job.id}-desc-${i}`,
-                                    )}
+                                    {stripInlineFormatting(item)}
                                   </li>
                                 ))}
                               </ul>
@@ -675,17 +822,6 @@ export default function JobsClient({
                         Posted {formatPostedDate(job.posted_date)}
                       </div>
                     ) : null}
-                  </div>
-
-                  <div className="flex items-center gap-2 md:justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled
-                      title="Match breakdown page not implemented"
-                    >
-                      View Match Breakdown
-                    </Button>
                   </div>
                 </div>
 

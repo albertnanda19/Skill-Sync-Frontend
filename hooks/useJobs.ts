@@ -9,6 +9,7 @@ export type JobsFilters = {
   company_name?: string;
   location?: string;
   skills?: string;
+  source_id?: string;
 };
 
 export type JobItem = {
@@ -54,10 +55,29 @@ export function jobsQueryKey({
       company_name: filters.company_name,
       location: filters.location,
       skills: filters.skills,
+      source_id: filters.source_id,
       limit: safeLimit,
       offset: safeOffset,
     },
   ] as const;
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function normalizeSourceId(value: string | undefined) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return undefined;
+
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return undefined;
+
+  const valid = parts.filter((p) => UUID_RE.test(p));
+  return valid.length ? valid.join(",") : undefined;
 }
 
 function normalizeText(value: unknown) {
@@ -174,6 +194,8 @@ export async function fetchJobsList({
   if (filters.company_name) params.company_name = filters.company_name;
   if (filters.location) params.location = filters.location;
   if (filters.skills) params.skills = filters.skills;
+  const sourceId = normalizeSourceId(filters.source_id);
+  if (sourceId) params.source_id = sourceId;
   if (created_after) params.created_after = created_after;
 
   const { data } = await appApi.get<JobsApiResponse>("/api/jobs", { params });
@@ -209,9 +231,21 @@ export function useJobs({
   const safeLimit = clampLimit(limit);
   const safeOffset = clampOffset(offset);
 
+  const normalizedFilters: JobsFilters = {
+    ...filters,
+    ...(filters.source_id
+      ? { source_id: normalizeSourceId(filters.source_id) }
+      : {}),
+  };
+
   return useQuery<JobsListResult, unknown>({
-    queryKey: jobsQueryKey({ filters, limit: safeLimit, offset: safeOffset }),
-    queryFn: () => fetchJobsList({ filters, limit: safeLimit, offset: safeOffset }),
+    queryKey: jobsQueryKey({ filters: normalizedFilters, limit: safeLimit, offset: safeOffset }),
+    queryFn: () =>
+      fetchJobsList({
+        filters: normalizedFilters,
+        limit: safeLimit,
+        offset: safeOffset,
+      }),
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
